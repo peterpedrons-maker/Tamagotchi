@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import "./style.css";
 import { hydrateIcons } from "./icons";
+import { setupInstallPrompt, registerServiceWorker } from "./pwa";
 import { MainScene } from "./game/scenes/MainScene";
 import {
   type PetState,
@@ -221,6 +222,8 @@ class GameController {
 }
 
 hydrateIcons();
+setupInstallPrompt();
+registerServiceWorker();
 
 const scene = new MainScene();
 
