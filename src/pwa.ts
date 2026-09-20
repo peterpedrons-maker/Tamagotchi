@@ -64,12 +64,23 @@ export function registerServiceWorker(): void {
   });
 }
 
+function canUseFullscreen(): boolean {
+  return typeof document.documentElement.requestFullscreen === "function" && document.fullscreenEnabled;
+}
+
+async function requestGameFullscreen(): Promise<void> {
+  try {
+    if (!document.fullscreenElement) {
+      await document.documentElement.requestFullscreen();
+    }
+  } catch {
+    // Ignore: the browser may deny it outside a direct user gesture.
+  }
+}
+
 export function setupFullscreenToggle(): void {
   const btn = byId<HTMLButtonElement>("fullscreen-btn");
-  if (!btn) return;
-
-  const canFullscreen = typeof document.documentElement.requestFullscreen === "function" && document.fullscreenEnabled;
-  if (!canFullscreen) return;
+  if (!btn || !canUseFullscreen()) return;
 
   btn.hidden = false;
 
@@ -83,17 +94,37 @@ export function setupFullscreenToggle(): void {
   };
 
   btn.addEventListener("click", async () => {
-    try {
-      if (document.fullscreenElement) {
+    if (document.fullscreenElement) {
+      try {
         await document.exitFullscreen();
-      } else {
-        await document.documentElement.requestFullscreen();
+      } catch {
+        // Ignore.
       }
-    } catch {
-      // Ignore: some browsers require a more direct user gesture or deny it silently.
+    } else {
+      await requestGameFullscreen();
     }
   });
 
   document.addEventListener("fullscreenchange", updateIcon);
   updateIcon();
+}
+
+/**
+ * Android hides the status/navigation bars only via the Fullscreen API,
+ * triggered from a direct tap — manifest "display" alone isn't reliable
+ * enough (and doesn't affect an app that was already installed before it
+ * changed). Show an explicit "tap to start" screen so that gesture is
+ * always available, instead of hoping the player finds the small toggle.
+ */
+export function setupStartScreen(): void {
+  const overlay = byId<HTMLElement>("start-screen");
+  const startBtn = byId<HTMLButtonElement>("start-btn");
+  if (!overlay || !startBtn || !canUseFullscreen()) return;
+
+  overlay.classList.add("show");
+
+  startBtn.addEventListener("click", async () => {
+    await requestGameFullscreen();
+    overlay.classList.remove("show");
+  });
 }

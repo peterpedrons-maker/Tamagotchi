@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import "./style.css";
 import { hydrateIcons } from "./icons";
-import { setupInstallPrompt, registerServiceWorker, setupFullscreenToggle } from "./pwa";
+import { setupInstallPrompt, registerServiceWorker, setupFullscreenToggle, setupStartScreen } from "./pwa";
 import { MainScene } from "./game/scenes/MainScene";
 import {
   type PetState,
@@ -240,6 +240,7 @@ hydrateIcons();
 setupInstallPrompt();
 registerServiceWorker();
 setupFullscreenToggle();
+setupStartScreen();
 setupActionbarScrollHint();
 
 const scene = new MainScene();
