@@ -92,12 +92,37 @@ button {
   flex: 1;
 }
 
+.identity-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .identity-name {
   font-weight: 800;
   font-size: 18px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.type-badge {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid var(--accent-dim);
+  color: var(--accent);
+}
+.type-badge.rare {
+  background: rgba(251, 191, 36, 0.15);
+  border-color: #92650f;
+  color: var(--gold);
 }
 
 .identity-level-row {
@@ -826,6 +851,10 @@ button {
   }
   .identity-name {
     font-size: 13px;
+  }
+  .type-badge {
+    font-size: 9px;
+    padding: 1px 6px;
   }
   .identity-level-row {
     font-size: 10px;

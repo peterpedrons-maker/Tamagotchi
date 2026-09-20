@@ -1,9 +1,11 @@
 import Phaser from "phaser";
 import { STAGE_ORDER, type Mood, type Stage } from "../Pet";
+import type { CreatureType } from "../CreatureType";
 import { ensureCreatureTexture } from "../creatureArt";
 
 export interface PetVisual {
   stage: Stage;
+  type: CreatureType;
   mood: Mood;
   isSick: boolean;
   isSleeping: boolean;
@@ -18,7 +20,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   create(): void {
-    const defaultKey = ensureCreatureTexture(this, "egg", "good", false, false);
+    const defaultKey = ensureCreatureTexture(this, "egg", "fera", "good", false, false);
     this.sprite = this.add.image(150, 160, defaultKey).setOrigin(0.5);
     this.tweens.add({
       targets: this.sprite,
@@ -44,7 +46,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private applyVisual(visual: PetVisual): void {
-    const key = ensureCreatureTexture(this, visual.stage, visual.mood, visual.isSick, visual.isSleeping);
+    const key = ensureCreatureTexture(this, visual.stage, visual.type, visual.mood, visual.isSick, visual.isSleeping);
     this.sprite.setTexture(key);
     const scale = visual.stage === "egg" ? 0.75 : 0.6 + STAGE_ORDER.indexOf(visual.stage) * 0.12;
     this.sprite.setScale(scale);

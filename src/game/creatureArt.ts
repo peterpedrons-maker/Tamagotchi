@@ -1,10 +1,17 @@
 import Phaser from "phaser";
 import type { Mood, Stage } from "./Pet";
+import type { CreatureType } from "./CreatureType";
 
-const MOOD_COLORS: Record<Mood, number> = {
-  great: 0x7ee787,
-  good: 0xffd166,
-  poor: 0xff6b6b,
+// Placeholder procedural body colors per type — swapped out once real PNG art lands.
+const TYPE_COLORS: Record<CreatureType, number> = {
+  fera: 0xef6b4a,
+  dragao: 0x2f9e6b,
+  fada: 0xf19bd8,
+  anjo: 0xf5eecb,
+  primitivo: 0xa9793f,
+  fantasma: 0x9fd6e8,
+  demonio: 0x8b3fa8,
+  celestial: 0xf3c94d,
 };
 
 const STAGE_RADIUS: Record<Stage, number> = {
@@ -15,19 +22,20 @@ const STAGE_RADIUS: Record<Stage, number> = {
   adult: 84,
 };
 
-function textureKey(stage: Stage, mood: Mood, sick: boolean, sleeping: boolean): string {
-  return `pet-${stage}-${mood}-${sick ? "sick" : "ok"}-${sleeping ? "sleep" : "awake"}`;
+function textureKey(stage: Stage, type: CreatureType, mood: Mood, sick: boolean, sleeping: boolean): string {
+  return `pet-${stage}-${type}-${mood}-${sick ? "sick" : "ok"}-${sleeping ? "sleep" : "awake"}`;
 }
 
 /** Procedurally draws (and caches) a texture for the given creature state. */
 export function ensureCreatureTexture(
   scene: Phaser.Scene,
   stage: Stage,
+  type: CreatureType,
   mood: Mood,
   sick: boolean,
   sleeping: boolean
 ): string {
-  const key = textureKey(stage, mood, sick, sleeping);
+  const key = textureKey(stage, type, mood, sick, sleeping);
   if (scene.textures.exists(key)) return key;
 
   const size = 220;
@@ -35,7 +43,7 @@ export function ensureCreatureTexture(
   const cy = size / 2;
   const g = scene.add.graphics();
 
-  const bodyColor = sick ? 0x9aa5b1 : MOOD_COLORS[mood];
+  const bodyColor = sick ? 0x9aa5b1 : TYPE_COLORS[type];
   const radius = STAGE_RADIUS[stage];
 
   if (stage === "egg") {
@@ -92,7 +100,7 @@ export function ensureCreatureTexture(
       g.fillCircle(cx + eyeOffsetX, cy + eyeOffsetY, sick ? 5 : 7);
     }
 
-    // Mouth
+    // Mouth (mood still shows through the expression, even though color now follows type)
     g.lineStyle(3, 0x1f2937, 1);
     g.beginPath();
     if (sick && !sleeping) {

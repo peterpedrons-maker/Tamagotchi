@@ -1,4 +1,5 @@
 import type { PetState } from "./Pet";
+import { rollCreatureType } from "./CreatureType";
 
 const STORAGE_KEY = "tamagotchi-save-v1";
 
@@ -7,7 +8,7 @@ export function loadPet(): PetState | null {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<PetState>;
-    return { coins: 50, ...parsed } as PetState;
+    return { coins: 50, type: rollCreatureType(), ...parsed } as PetState;
   } catch {
     return null;
   }

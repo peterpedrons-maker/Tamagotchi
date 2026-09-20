@@ -21,6 +21,7 @@ import {
   GIFT_COST_VALUE,
 } from "./game/Pet";
 import { loadPet, savePet, clearPet } from "./game/Storage";
+import { TYPE_INFO } from "./game/CreatureType";
 
 const NAV_LABELS: Record<string, string> = {
   cuidar: "Cuidar",
@@ -44,6 +45,7 @@ class GameController {
 
   private els = {
     name: byId<HTMLElement>("pet-name"),
+    typeBadge: byId<HTMLElement>("pet-type"),
     level: byId<HTMLElement>("pet-level"),
     xpFill: byId<HTMLElement>("xp-fill"),
     xpText: byId<HTMLElement>("xp-text"),
@@ -164,7 +166,10 @@ class GameController {
     const { current, total } = getStageProgress(pet, now);
     const attrs = getAttributes(pet);
 
+    const typeInfo = TYPE_INFO[pet.type];
     this.els.name.textContent = pet.name;
+    this.els.typeBadge.textContent = typeInfo.label;
+    this.els.typeBadge.classList.toggle("rare", typeInfo.rarity === "raro");
     this.els.level.textContent = `Lv. ${getLevel(pet)}`;
 
     if (Number.isFinite(total) && total > 0) {
@@ -214,6 +219,7 @@ class GameController {
 
     this.scene.setVisual({
       stage: pet.stage,
+      type: pet.type,
       mood,
       isSick: pet.isSick,
       isSleeping: pet.isSleeping,

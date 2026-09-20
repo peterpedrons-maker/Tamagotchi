@@ -1,8 +1,11 @@
+import { type CreatureType, type StatKey, TYPE_INFO, rollCreatureType } from "./CreatureType";
+
 export type Stage = "egg" | "baby" | "child" | "teen" | "adult";
 export type Mood = "great" | "good" | "poor";
 
 export interface PetState {
   name: string;
+  type: CreatureType;
   stage: Stage;
   birthTime: number;
   lastUpdate: number;
@@ -56,6 +59,7 @@ export function createNewPet(name: string): PetState {
   const now = Date.now();
   return {
     name,
+    type: rollCreatureType(),
     stage: "egg",
     birthTime: now,
     lastUpdate: now,
@@ -216,16 +220,21 @@ export function getStageProgress(state: PetState, now: number): { current: numbe
   return { current, total };
 }
 
-/** Cosmetic attributes derived from stage + care quality, in the spirit of an RPG stat panel. */
+const TYPE_FOCUS_BONUS = 1.35;
+
+/** Cosmetic attributes derived from stage + care quality + the creature's fixed type focus. */
 export function getAttributes(state: PetState): Attributes {
   const stageIdx = STAGE_ORDER.indexOf(state.stage);
   const base = 10 + stageIdx * 8;
   const careFactor = state.careSamples > 0 ? state.careSum / state.careSamples / 100 : 1;
+  const focus = TYPE_INFO[state.type].focus;
+  const bonus = (key: StatKey) => (focus.includes(key) ? TYPE_FOCUS_BONUS : 1);
+
   return {
-    attack: Math.round(base * (0.9 + careFactor * 0.3)),
-    defense: Math.round(base * 0.85 * (0.9 + careFactor * 0.3)),
-    speed: Math.round((base * 0.7 + state.energy * 0.15)),
-    intelligence: Math.round(base * 0.6 + state.happiness * 0.1),
+    attack: Math.round(base * (0.9 + careFactor * 0.3) * bonus("attack")),
+    defense: Math.round(base * 0.85 * (0.9 + careFactor * 0.3) * bonus("defense")),
+    speed: Math.round((base * 0.7 + state.energy * 0.15) * bonus("speed")),
+    intelligence: Math.round((base * 0.6 + state.happiness * 0.1) * bonus("intelligence")),
   };
 }
 
