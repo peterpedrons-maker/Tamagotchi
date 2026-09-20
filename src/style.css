@@ -38,8 +38,8 @@ button {
 
 #app {
   display: grid;
-  grid-template-columns: 190px 1fr 250px;
-  grid-template-rows: 72px 1fr 92px;
+  grid-template-columns: minmax(0, 190px) minmax(0, 1fr) minmax(0, 250px);
+  grid-template-rows: 72px minmax(0, 1fr) 76px;
   grid-template-areas:
     "topbar topbar topbar"
     "sidebar room side"
@@ -495,16 +495,56 @@ button {
 }
 
 /* ---------- Action bar ---------- */
-.actionbar {
+.actionbar-wrap {
   grid-area: actionbar;
+  position: relative;
+  min-height: 0;
+}
+
+.actionbar {
+  height: 100%;
   display: flex;
   gap: 8px;
   overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+}
+
+.scroll-hint {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 34px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(90deg, transparent, var(--bg) 70%);
+  color: var(--accent);
+  pointer-events: none;
+}
+.scroll-hint.show {
+  display: flex;
+}
+.scroll-hint svg {
+  width: 16px;
+  height: 16px;
+  animation: scroll-hint-nudge 1.2s ease-in-out infinite;
+}
+@keyframes scroll-hint-nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(4px);
+  }
 }
 
 .action-btn {
   flex: 1 1 0;
   min-width: 92px;
+  min-height: 52px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -711,8 +751,8 @@ button {
   #app {
     gap: 6px;
     padding: 6px;
-    grid-template-columns: clamp(88px, 15vw, 190px) 1fr clamp(130px, 20vw, 250px);
-    grid-template-rows: clamp(40px, 14dvh, 64px) 1fr clamp(44px, 15dvh, 76px);
+    grid-template-columns: clamp(88px, 15vw, 190px) minmax(0, 1fr) clamp(130px, 20vw, 250px);
+    grid-template-rows: clamp(40px, 14dvh, 64px) minmax(0, 1fr) clamp(44px, 15dvh, 76px);
   }
   .sidebar {
     gap: 5px;
@@ -788,7 +828,8 @@ button {
     gap: 5px;
   }
   .action-btn {
-    min-width: 68px;
+    min-width: 62px;
+    min-height: 40px;
     font-size: 10px;
     gap: 2px;
   }

@@ -147,15 +147,22 @@
         </div>
       </aside>
 
-      <footer class="actionbar">
-        <button class="action-btn feed" data-action="feed"><span class="action-icon" data-icon="apple" data-icon-size="20"></span>Alimentar</button>
-        <button class="action-btn sleep" data-action="sleep"><span class="action-icon" data-icon="bed" data-icon-size="20"></span><span id="sleep-label">Dormir</span></button>
-        <button class="action-btn clean" data-action="clean"><span class="action-icon" data-icon="broom" data-icon-size="20"></span>Limpar</button>
-        <button class="action-btn play" data-action="play"><span class="action-icon" data-icon="heart" data-icon-size="20"></span>Interagir</button>
-        <button class="action-btn gift" data-action="gift"><span class="action-icon" data-icon="gift" data-icon-size="20"></span>Presentear</button>
-        <button class="action-btn heal" data-action="heal"><span class="action-icon" data-icon="pill" data-icon-size="20"></span>Remédio</button>
-        <button class="action-btn locked" data-action="explore"><span class="action-icon" data-icon="lock" data-icon-size="20"></span>Exploração<br /><small>Em breve</small></button>
-      </footer>
+      <div class="actionbar-wrap">
+        <footer class="actionbar" id="actionbar">
+          <button class="action-btn feed" data-action="feed"><span class="action-icon" data-icon="apple" data-icon-size="20"></span>Alimentar</button>
+          <button class="action-btn sleep" data-action="sleep"><span class="action-icon" data-icon="bed" data-icon-size="20"></span><span id="sleep-label">Dormir</span></button>
+          <button class="action-btn clean" data-action="clean"><span class="action-icon" data-icon="broom" data-icon-size="20"></span>Limpar</button>
+          <button class="action-btn play" data-action="play"><span class="action-icon" data-icon="heart" data-icon-size="20"></span>Interagir</button>
+          <button class="action-btn gift" data-action="gift"><span class="action-icon" data-icon="gift" data-icon-size="20"></span>Presentear</button>
+          <button class="action-btn heal" data-action="heal"><span class="action-icon" data-icon="pill" data-icon-size="20"></span>Remédio</button>
+          <button class="action-btn locked" data-action="explore"><span class="action-icon" data-icon="lock" data-icon-size="20"></span>Exploração<br /><small>Em breve</small></button>
+        </footer>
+        <div class="scroll-hint" id="scroll-hint">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 6l6 6-6 6"></path>
+          </svg>
+        </div>
+      </div>
 
       <div class="toast-banner" id="toast-banner"></div>
     </div>

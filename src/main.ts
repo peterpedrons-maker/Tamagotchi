@@ -221,10 +221,26 @@ class GameController {
   }
 }
 
+function setupActionbarScrollHint(): void {
+  const bar = byId<HTMLElement>("actionbar");
+  const hint = byId<HTMLElement>("scroll-hint");
+  if (!bar || !hint) return;
+
+  const update = () => {
+    const hasMore = bar.scrollWidth - bar.clientWidth - bar.scrollLeft > 4;
+    hint.classList.toggle("show", hasMore);
+  };
+
+  bar.addEventListener("scroll", update, { passive: true });
+  window.addEventListener("resize", update);
+  update();
+}
+
 hydrateIcons();
 setupInstallPrompt();
 registerServiceWorker();
 setupFullscreenToggle();
+setupActionbarScrollHint();
 
 const scene = new MainScene();
 
