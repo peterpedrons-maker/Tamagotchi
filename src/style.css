@@ -600,7 +600,9 @@ button {
   position: fixed;
   top: 16px;
   left: 50%;
-  transform: translateX(-50%) translateY(-140%);
+  transform: translateX(-50%) translateY(-16px);
+  opacity: 0;
+  visibility: hidden;
   background: #12283d;
   border: 2px solid var(--accent);
   border-radius: var(--radius);
@@ -608,11 +610,13 @@ button {
   font-size: 13px;
   font-weight: 700;
   z-index: 20;
-  transition: transform 0.25s ease;
+  transition: transform 0.25s ease, opacity 0.25s ease, visibility 0.25s;
   pointer-events: none;
 }
 .toast-banner.show {
   transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  visibility: visible;
 }
 
 /* ---------- Start screen (requests real fullscreen on tap) ---------- */
