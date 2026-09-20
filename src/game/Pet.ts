@@ -15,9 +15,25 @@ export interface PetState {
   careSum: number;
   careSamples: number;
   isDead: boolean;
+  coins: number;
+}
+
+export interface Attributes {
+  attack: number;
+  defense: number;
+  speed: number;
+  intelligence: number;
 }
 
 export const STAGE_ORDER: Stage[] = ["egg", "baby", "child", "teen", "adult"];
+
+export const STAGE_LABEL: Record<Stage, string> = {
+  egg: "Ovo",
+  baby: "Bebê",
+  child: "Criança",
+  teen: "Adolescente",
+  adult: "Adulto",
+};
 
 // Duration (ms) a pet stays in each stage before advancing to the next one.
 export const STAGE_DURATIONS: Record<Stage, number> = {
@@ -33,6 +49,8 @@ const HUNGER_DECAY_PER_MS = 1 / 18_000; // -1 every 18s
 const HAPPINESS_DECAY_PER_MS = 1 / 22_000; // -1 every 22s
 const ENERGY_DECAY_PER_MS = 1 / 28_000; // -1 every 28s while awake
 const ENERGY_RECOVER_PER_MS_SLEEPING = 1 / 9_000; // +1 every 9s while asleep
+
+const GIFT_COST = 15;
 
 export function createNewPet(name: string): PetState {
   const now = Date.now();
@@ -50,6 +68,7 @@ export function createNewPet(name: string): PetState {
     careSum: 0,
     careSamples: 0,
     isDead: false,
+    coins: 50,
   };
 }
 
@@ -125,7 +144,7 @@ export function tick(state: PetState, now: number): PetState {
 
 export function feed(state: PetState): PetState {
   if (state.isDead || state.isSleeping) return state;
-  return { ...state, hunger: clamp(state.hunger + 25) };
+  return { ...state, hunger: clamp(state.hunger + 25), coins: state.coins + 2 };
 }
 
 export function play(state: PetState): PetState {
@@ -134,6 +153,7 @@ export function play(state: PetState): PetState {
     ...state,
     happiness: clamp(state.happiness + 20),
     energy: clamp(state.energy - 8),
+    coins: state.coins + 3,
   };
 }
 
@@ -147,9 +167,66 @@ export function heal(state: PetState): PetState {
   return { ...state, health: clamp(state.health + 30), isSick: state.health + 30 < 30 };
 }
 
+/** Cleans the pet, giving a small happiness/health boost. */
+export function clean(state: PetState): PetState {
+  if (state.isDead) return state;
+  return {
+    ...state,
+    happiness: clamp(state.happiness + 8),
+    health: clamp(state.health + 10),
+  };
+}
+
+/** Spends coins on a gift for a bigger happiness boost. Returns state unchanged if too poor. */
+export function gift(state: PetState): PetState {
+  if (state.isDead || state.coins < GIFT_COST) return state;
+  return {
+    ...state,
+    happiness: clamp(state.happiness + 30),
+    coins: state.coins - GIFT_COST,
+  };
+}
+
 export function getMood(state: PetState): Mood {
   const avg = state.careSamples > 0 ? state.careSum / state.careSamples : (state.hunger + state.happiness + state.health) / 3;
   if (avg >= 66) return "great";
   if (avg >= 33) return "good";
   return "poor";
 }
+
+/** Pet level: 1 per stage reached, plus progress within the current (non-adult) stage. */
+export function getLevel(state: PetState): number {
+  const stageIdx = STAGE_ORDER.indexOf(state.stage);
+  return stageIdx * 2 + 1;
+}
+
+/** Progress (0-1) and duration (ms) of the current stage, for an XP-style bar. */
+export function getStageProgress(state: PetState, now: number): { current: number; total: number } {
+  const stageIdx = STAGE_ORDER.indexOf(state.stage);
+  const total = STAGE_DURATIONS[state.stage];
+  if (!Number.isFinite(total)) {
+    return { current: 1, total: 1 };
+  }
+  let cumulative = 0;
+  for (let i = 0; i < stageIdx; i++) {
+    cumulative += STAGE_DURATIONS[STAGE_ORDER[i]];
+  }
+  const age = now - state.birthTime;
+  const current = clamp(age - cumulative, 0, total);
+  return { current, total };
+}
+
+/** Cosmetic attributes derived from stage + care quality, in the spirit of an RPG stat panel. */
+export function getAttributes(state: PetState): Attributes {
+  const stageIdx = STAGE_ORDER.indexOf(state.stage);
+  const base = 10 + stageIdx * 8;
+  const careFactor = state.careSamples > 0 ? state.careSum / state.careSamples / 100 : 1;
+  return {
+    attack: Math.round(base * (0.9 + careFactor * 0.3)),
+    defense: Math.round(base * 0.85 * (0.9 + careFactor * 0.3)),
+    speed: Math.round((base * 0.7 + state.energy * 0.15)),
+    intelligence: Math.round(base * 0.6 + state.happiness * 0.1),
+  };
+}
+
+export const GIFT_COST_VALUE = GIFT_COST;

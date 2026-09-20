@@ -6,7 +6,8 @@ export function loadPet(): PetState | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as PetState;
+    const parsed = JSON.parse(raw) as Partial<PetState>;
+    return { coins: 50, ...parsed } as PetState;
   } catch {
     return null;
   }
