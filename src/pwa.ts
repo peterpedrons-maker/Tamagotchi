@@ -1,3 +1,5 @@
+import { hydrateIcons } from "./icons";
+
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
@@ -60,4 +62,38 @@ export function registerServiceWorker(): void {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("./sw.js").catch(() => {});
   });
+}
+
+export function setupFullscreenToggle(): void {
+  const btn = byId<HTMLButtonElement>("fullscreen-btn");
+  if (!btn) return;
+
+  const canFullscreen = typeof document.documentElement.requestFullscreen === "function" && document.fullscreenEnabled;
+  if (!canFullscreen) return;
+
+  btn.hidden = false;
+
+  const updateIcon = () => {
+    btn.innerHTML = "";
+    const span = document.createElement("span");
+    span.dataset.icon = document.fullscreenElement ? "shrink" : "expand";
+    span.dataset.iconSize = "18";
+    btn.appendChild(span);
+    hydrateIcons(btn);
+  };
+
+  btn.addEventListener("click", async () => {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch {
+      // Ignore: some browsers require a more direct user gesture or deny it silently.
+    }
+  });
+
+  document.addEventListener("fullscreenchange", updateIcon);
+  updateIcon();
 }

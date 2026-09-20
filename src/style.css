@@ -23,7 +23,8 @@ body {
   margin: 0;
   padding: 0;
   width: 100%;
-  height: 100%;
+  height: 100vh;
+  height: 100dvh;
   background: var(--bg);
   color: var(--text);
   font-family: "Nunito", system-ui, sans-serif;
@@ -37,18 +38,19 @@ button {
 
 #app {
   display: grid;
-  grid-template-columns: 220px 1fr 280px;
-  grid-template-rows: 84px 1fr 108px;
+  grid-template-columns: 190px 1fr 250px;
+  grid-template-rows: 72px 1fr 92px;
   grid-template-areas:
     "topbar topbar topbar"
     "sidebar room side"
-    "sidebar actionbar side";
-  gap: 10px;
+    "actionbar actionbar actionbar";
+  gap: 8px;
   width: 100%;
   height: 100%;
   max-width: 1400px;
   margin: 0 auto;
-  padding: 10px;
+  padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom))
+    max(8px, env(safe-area-inset-left));
 }
 
 .panel {
@@ -197,6 +199,25 @@ button {
 .coin-icon {
   display: inline-flex;
   color: var(--gold);
+}
+
+.fullscreen-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  background: var(--panel);
+  border: 2px solid var(--panel-border);
+  border-radius: var(--radius);
+  color: var(--text-dim);
+}
+.fullscreen-btn:hover {
+  color: var(--text);
+  border-color: var(--accent-dim);
+}
+.fullscreen-btn[hidden] {
+  display: none;
 }
 
 /* ---------- Sidebar ---------- */
@@ -690,8 +711,8 @@ button {
   #app {
     gap: 6px;
     padding: 6px;
-    grid-template-columns: clamp(96px, 16vw, 220px) 1fr clamp(150px, 22vw, 280px);
-    grid-template-rows: clamp(46px, 15vh, 84px) 1fr clamp(52px, 16vh, 108px);
+    grid-template-columns: clamp(88px, 15vw, 190px) 1fr clamp(130px, 20vw, 250px);
+    grid-template-rows: clamp(40px, 14dvh, 64px) 1fr clamp(44px, 15dvh, 76px);
   }
   .sidebar {
     gap: 5px;
@@ -731,6 +752,9 @@ button {
     padding: 4px 12px;
     font-size: 13px;
     gap: 5px;
+  }
+  .fullscreen-btn {
+    width: 36px;
   }
   .side-panel {
     gap: 6px;

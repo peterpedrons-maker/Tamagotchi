@@ -18,6 +18,8 @@ export const ICONS: Record<string, string> = {
   wind: `<path d="M3 8h11a2.5 2.5 0 1 0-2.2-3.7"/><path d="M3 13h15a2.5 2.5 0 1 1-2.2 3.7"/><path d="M3 18h8"/>`,
   brain: `<path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3.5 3.5 0 0 0 2.5 6c.3 1.5 1.5 2.5 2.5 2.5V4z"/><path d="M15 4a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3.5 3.5 0 0 1-2.5 6c-.3 1.5-1.5 2.5-2.5 2.5V4z"/>`,
   coin: `<circle cx="12" cy="12" r="9"/><path d="M12 7v10"/><path d="M9.5 9.5c0-1.1 1.1-2 2.5-2s2.5.9 2.5 2-1.1 1.6-2.5 2-2.5.9-2.5 2 1.1 2 2.5 2 2.5-.9 2.5-2"/>`,
+  expand: `<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>`,
+  shrink: `<path d="M4 9h4V5"/><path d="M20 9h-4V5"/><path d="M4 15h4v4"/><path d="M20 15h-4v4"/>`,
 };
 
 export function icon(name: string, size = 18): string {
