@@ -48,9 +48,9 @@
       <p class="start-hint">Isso esconde as barras do celular durante o jogo.</p>
     </div>
 
-    <div id="app">
-      <header class="topbar">
-        <div class="panel identity">
+    <div class="skin-wrap">
+      <div id="skin">
+        <header class="ov ov-identity">
           <div class="avatar" id="avatar-thumb"></div>
           <div class="identity-info">
             <div class="identity-name-row">
@@ -63,110 +63,80 @@
               <span class="xp-text" id="xp-text">0 / 60</span>
             </div>
           </div>
-        </div>
-        <div class="panel vitals">
+        </header>
+
+        <div class="ov ov-vitals">
           <div class="vital">
-            <span class="vital-icon heart" data-icon="heart" data-icon-size="16"></span>
             <div class="vital-bar"><div class="vital-fill hp" id="hp-fill"></div></div>
             <span class="vital-text" id="hp-text">100 / 100</span>
           </div>
           <div class="vital">
-            <span class="vital-icon bolt" data-icon="wind" data-icon-size="16"></span>
             <div class="vital-bar"><div class="vital-fill energy" id="energy-fill"></div></div>
             <span class="vital-text" id="energy-text">100 / 100</span>
           </div>
         </div>
-        <div class="panel coins">
-          <span class="coin-icon" data-icon="coin" data-icon-size="20"></span>
+
+        <div class="ov ov-coins">
           <span id="coin-count">50</span>
         </div>
-        <button class="fullscreen-btn" id="fullscreen-btn" title="Tela cheia" hidden>
-          <span data-icon="expand" data-icon-size="18"></span>
-        </button>
-      </header>
 
-      <nav class="sidebar">
-        <button class="nav-btn active" data-nav="casa">
-          <span class="nav-icon" data-icon="home"></span>Casa
-        </button>
-        <button class="nav-btn" data-nav="cuidar">
-          <span class="nav-icon" data-icon="heart"></span>Cuidar
-        </button>
-        <button class="nav-btn" data-nav="treinar">
-          <span class="nav-icon" data-icon="dumbbell"></span>Treinar
-        </button>
-        <button class="nav-btn" data-nav="minigames">
-          <span class="nav-icon" data-icon="gamepad"></span>Minigames
-        </button>
-        <button class="nav-btn" data-nav="arena">
-          <span class="nav-icon" data-icon="sword"></span>Arena
-        </button>
-        <button class="nav-btn" data-nav="inventario">
-          <span class="nav-icon" data-icon="backpack"></span>Inventário
-        </button>
-        <button class="nav-btn" data-nav="bestiario">
-          <span class="nav-icon" data-icon="book"></span>Bestiário
-        </button>
-        <button class="nav-btn" data-nav="config">
-          <span class="nav-icon" data-icon="gear"></span>Configurações
-        </button>
-      </nav>
+        <button class="ov ov-fullscreen" id="fullscreen-btn" title="Tela cheia" hidden></button>
 
-      <main class="room">
-        <div id="game-root"></div>
-        <div class="status-toast" id="status-toast">Seu bichinho está bem!</div>
-        <div class="death-overlay" id="death-overlay">
-          <div class="death-box">
-            <h2>Seu bichinho não resistiu 💔</h2>
-            <button id="restart-btn">Recomeçar</button>
+        <nav class="ov ov-sidebar">
+          <button class="nav-btn active" data-nav="casa" aria-label="Casa"></button>
+          <button class="nav-btn" data-nav="cuidar" aria-label="Cuidar"></button>
+          <button class="nav-btn" data-nav="treinar" aria-label="Treinar"></button>
+          <button class="nav-btn" data-nav="minigames" aria-label="Minigames"></button>
+          <button class="nav-btn" data-nav="arena" aria-label="Arena"></button>
+          <button class="nav-btn" data-nav="inventario" aria-label="Inventário"></button>
+          <button class="nav-btn" data-nav="bestiario" aria-label="Bestiário"></button>
+          <button class="nav-btn" data-nav="config" aria-label="Configurações"></button>
+        </nav>
+
+        <main class="ov ov-room">
+          <div id="game-root"></div>
+          <div class="status-toast" id="status-toast">Seu bichinho está bem!</div>
+          <div class="death-overlay" id="death-overlay">
+            <div class="death-box">
+              <h2>Seu bichinho não resistiu 💔</h2>
+              <button id="restart-btn">Recomeçar</button>
+            </div>
+          </div>
+        </main>
+
+        <div class="ov ov-attrs">
+          <div class="attr-row"><span class="attr-value" id="attr-hp">100</span></div>
+          <div class="attr-row"><span class="attr-value" id="attr-attack">10</span></div>
+          <div class="attr-row"><span class="attr-value" id="attr-defense">9</span></div>
+          <div class="attr-row"><span class="attr-value" id="attr-speed">12</span></div>
+          <div class="attr-row"><span class="attr-value" id="attr-intel">10</span></div>
+        </div>
+
+        <div class="ov ov-status">
+          <div class="stat-row"><div class="stat-bar"><div class="stat-fill hunger" id="hunger-fill"></div></div></div>
+          <div class="stat-row"><div class="stat-bar"><div class="stat-fill happiness" id="happiness-fill"></div></div></div>
+          <div class="stat-row"><div class="stat-bar"><div class="stat-fill energy2" id="energy2-fill"></div></div></div>
+        </div>
+
+        <div class="ov ov-actionbar-wrap">
+          <footer class="actionbar" id="actionbar">
+            <button class="action-btn" data-action="feed" aria-label="Alimentar"></button>
+            <button class="action-btn" data-action="sleep" aria-label="Dormir"><span id="sleep-label" class="sr-only">Dormir</span></button>
+            <button class="action-btn" data-action="clean" aria-label="Limpar"></button>
+            <button class="action-btn" data-action="play" aria-label="Interagir"></button>
+            <button class="action-btn" data-action="gift" aria-label="Presentear"></button>
+            <button class="action-btn" data-action="heal" aria-label="Remédio"></button>
+            <button class="action-btn locked" data-action="explore" aria-label="Exploração (em breve)"></button>
+          </footer>
+          <div class="scroll-hint" id="scroll-hint">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 6l6 6-6 6"></path>
+            </svg>
           </div>
         </div>
-      </main>
 
-      <aside class="side-panel">
-        <div class="panel-block">
-          <h3>Atributos</h3>
-          <div class="attr-row"><span class="attr-icon" data-icon="heart" data-icon-size="15"></span>HP<span class="attr-value" id="attr-hp">100</span></div>
-          <div class="attr-row"><span class="attr-icon" data-icon="sword" data-icon-size="15"></span>Ataque<span class="attr-value" id="attr-attack">10</span></div>
-          <div class="attr-row"><span class="attr-icon" data-icon="shield" data-icon-size="15"></span>Defesa<span class="attr-value" id="attr-defense">9</span></div>
-          <div class="attr-row"><span class="attr-icon" data-icon="wind" data-icon-size="15"></span>Velocidade<span class="attr-value" id="attr-speed">12</span></div>
-          <div class="attr-row"><span class="attr-icon" data-icon="brain" data-icon-size="15"></span>Inteligência<span class="attr-value" id="attr-intel">10</span></div>
-        </div>
-        <div class="panel-block">
-          <h3>Status</h3>
-          <div class="stat-row">
-            <span class="stat-label">Fome</span>
-            <div class="stat-bar"><div class="stat-fill hunger" id="hunger-fill"></div></div>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">Felicidade</span>
-            <div class="stat-bar"><div class="stat-fill happiness" id="happiness-fill"></div></div>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">Energia</span>
-            <div class="stat-bar"><div class="stat-fill energy2" id="energy2-fill"></div></div>
-          </div>
-        </div>
-      </aside>
-
-      <div class="actionbar-wrap">
-        <footer class="actionbar" id="actionbar">
-          <button class="action-btn feed" data-action="feed"><span class="action-icon" data-icon="apple" data-icon-size="20"></span>Alimentar</button>
-          <button class="action-btn sleep" data-action="sleep"><span class="action-icon" data-icon="bed" data-icon-size="20"></span><span id="sleep-label">Dormir</span></button>
-          <button class="action-btn clean" data-action="clean"><span class="action-icon" data-icon="broom" data-icon-size="20"></span>Limpar</button>
-          <button class="action-btn play" data-action="play"><span class="action-icon" data-icon="heart" data-icon-size="20"></span>Interagir</button>
-          <button class="action-btn gift" data-action="gift"><span class="action-icon" data-icon="gift" data-icon-size="20"></span>Presentear</button>
-          <button class="action-btn heal" data-action="heal"><span class="action-icon" data-icon="pill" data-icon-size="20"></span>Remédio</button>
-          <button class="action-btn locked" data-action="explore"><span class="action-icon" data-icon="lock" data-icon-size="20"></span>Exploração<br /><small>Em breve</small></button>
-        </footer>
-        <div class="scroll-hint" id="scroll-hint">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 6l6 6-6 6"></path>
-          </svg>
-        </div>
+        <div class="toast-banner" id="toast-banner"></div>
       </div>
-
-      <div class="toast-banner" id="toast-banner"></div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

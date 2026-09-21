@@ -227,6 +227,31 @@ class GameController {
   }
 }
 
+const SKIN_RATIO = 1536 / 1024;
+
+/**
+ * Sizes #skin in explicit pixels to fit .skin-wrap while preserving the
+ * artwork's aspect ratio. Percentage heights on its absolutely positioned
+ * children only resolve reliably against a box with an unambiguous pixel
+ * size, so this replaces relying on CSS aspect-ratio alone.
+ */
+function fitSkin(): void {
+  const wrap = document.querySelector<HTMLElement>(".skin-wrap");
+  const skin = byId<HTMLElement>("skin");
+  if (!wrap || !skin) return;
+
+  const availW = wrap.clientWidth;
+  const availH = wrap.clientHeight;
+  let w = availW;
+  let h = w / SKIN_RATIO;
+  if (h > availH) {
+    h = availH;
+    w = h * SKIN_RATIO;
+  }
+  skin.style.width = `${w}px`;
+  skin.style.height = `${h}px`;
+}
+
 function setupActionbarScrollHint(): void {
   const bar = byId<HTMLElement>("actionbar");
   const hint = byId<HTMLElement>("scroll-hint");
@@ -241,6 +266,11 @@ function setupActionbarScrollHint(): void {
   window.addEventListener("resize", update);
   update();
 }
+
+fitSkin();
+window.addEventListener("resize", fitSkin);
+window.addEventListener("orientationchange", fitSkin);
+document.addEventListener("fullscreenchange", fitSkin);
 
 hydrateIcons();
 setupInstallPrompt();
