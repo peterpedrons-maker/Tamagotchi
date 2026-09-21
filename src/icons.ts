@@ -22,7 +22,32 @@ export const ICONS: Record<string, string> = {
   shrink: `<path d="M4 9h4V5"/><path d="M20 9h-4V5"/><path d="M4 15h4v4"/><path d="M20 15h-4v4"/>`,
 };
 
+/** Pixel-art icons cropped from the user's reference sheet, used in place of the stroke set above when available. */
+const RASTER_ICONS = new Set([
+  "home",
+  "heart",
+  "wind",
+  "dumbbell",
+  "gamepad",
+  "sword",
+  "backpack",
+  "book",
+  "gear",
+  "shield",
+  "brain",
+  "apple",
+  "bed",
+  "broom",
+  "gift",
+  "pill",
+  "lock",
+  "coin",
+]);
+
 export function icon(name: string, size = 18): string {
+  if (RASTER_ICONS.has(name)) {
+    return `<img class="pixel-icon" src="/icons/game/${name}.png" width="${size}" height="${size}" alt="" />`;
+  }
   const path = ICONS[name] ?? "";
   return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
 }

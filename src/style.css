@@ -167,6 +167,11 @@ button {
   gap: 8px;
 }
 
+.pixel-icon {
+  image-rendering: pixelated;
+  display: block;
+}
+
 .vital-icon {
   display: inline-flex;
   flex-shrink: 0;
@@ -281,7 +286,7 @@ button {
 
 .nav-icon {
   display: inline-flex;
-  width: 20px;
+  width: 24px;
   justify-content: center;
   flex-shrink: 0;
 }
@@ -391,7 +396,7 @@ button {
 }
 .attr-icon {
   display: inline-flex;
-  width: 20px;
+  width: 22px;
   justify-content: center;
   color: var(--accent);
   flex-shrink: 0;
@@ -755,9 +760,10 @@ button {
     font-size: 11px;
     gap: 6px;
   }
-  .nav-icon svg {
-    width: 14px;
-    height: 14px;
+  .nav-icon svg,
+  .nav-icon img {
+    width: 16px;
+    height: 16px;
   }
   .identity {
     padding: 4px 10px;
@@ -807,9 +813,10 @@ button {
     font-size: 11px;
     padding: 3px 0;
   }
-  .attr-icon svg {
-    width: 13px;
-    height: 13px;
+  .attr-icon svg,
+  .attr-icon img {
+    width: 15px;
+    height: 15px;
   }
   .stat-row {
     margin-bottom: 6px;
@@ -830,9 +837,10 @@ button {
     font-size: 10px;
     gap: 2px;
   }
-  .action-icon svg {
-    width: 15px;
-    height: 15px;
+  .action-icon svg,
+  .action-icon img {
+    width: 18px;
+    height: 18px;
   }
   .action-btn.locked small {
     font-size: 8px;
