@@ -250,6 +250,11 @@ function fitSkin(): void {
   }
   skin.style.width = `${w}px`;
   skin.style.height = `${h}px`;
+  // 1% of the skin's own box, in px -- used instead of CSS container query units
+  // (cqw/cqh) so every overlay scales with the artwork even on browsers that
+  // don't support container queries yet (older Samsung Internet, etc.).
+  skin.style.setProperty("--sw", `${w / 100}px`);
+  skin.style.setProperty("--sh", `${h / 100}px`);
 }
 
 function setupActionbarScrollHint(): void {
