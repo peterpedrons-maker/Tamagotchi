@@ -46,7 +46,7 @@ const RASTER_ICONS = new Set([
 
 export function icon(name: string, size = 18): string {
   if (RASTER_ICONS.has(name)) {
-    return `<img class="pixel-icon" src="/icons/game/${name}.png" width="${size}" height="${size}" alt="" />`;
+    return `<img class="pixel-icon" src="${import.meta.env.BASE_URL}icons/game/${name}.png" width="${size}" height="${size}" alt="" />`;
   }
   const path = ICONS[name] ?? "";
   return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
