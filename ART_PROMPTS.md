@@ -1,102 +1,79 @@
 # Prompts de Arte das Criaturas
 
-Espaço pra organizar os prompts de IA conforme forem sendo gerados. Cada linha das tabelas abaixo vira um arquivo PNG que entra no jogo.
+Cada bloco abaixo é uma grade **4 linhas (bichos) × 5 colunas (Ovo → Bebê → Criança → Adolescente → Adulto)**. Gera 1 imagem por grade, recorta as 20 células e salva conforme o nome indicado.
 
-## Estilo visual
-
-- **Pixel art 16-bit**, estilo SNES (referências: Chrono Trigger, Secret of Mana, Pokémon Gold/Silver overworld) — contornos limpos, poucas cores por sprite, nada de gradientes suaves/realistas.
-- **Fundo transparente** (PNG).
-- Gere em resolução alta (512×512 ou 1024×1024) mesmo sendo pixel art — o jogo redimensiona pra baixo. Prefira formas simples e bem definidas a detalhes minúsculos que se perdem ao reduzir.
-- Enquadramento: criatura centralizada, ocupando a maior parte do quadro, vista de frente ou 3/4 (estilo "retrato de menu de status" de RPG, não sprite de mapa).
-
-### Template de prompt (ponto de partida, ajuste à vontade)
-
-```
-pixel art creature, 16-bit SNES RPG style, [descrição da criatura/pose],
-[paleta de cores], clean outlines, centered, transparent background,
-front-facing portrait, no gradients, crisp pixel edges
-```
-
-### Paleta sugerida por tipo (placeholder atual do jogo — pode manter ou trocar)
-
-| Tipo | Cor base |
-|---|---|
-| Fera | laranja/vermelho `#EF6B4A` |
-| Dragão | verde esmeralda `#2F9E6B` |
-| Fada | rosa claro `#F19BD8` |
-| Anjo | branco/dourado claro `#F5EECB` |
-| Primitivo | marrom `#A9793F` |
-| Fantasma | azul pálido `#9FD6E8` |
-| Demônio | roxo escuro `#8B3FA8` |
-| Celestial | dourado `#F3C94D` |
-
-## Convenção de arquivos
-
-```
-public/creatures/<tipo>/<estagio>.png
-```
-
-Estágios: `ovo`, `bebe`, `crianca`, `adolescente`, `adulto`.
-O Ovo é compartilhado por todos os tipos (mistério até nascer) — só 1 arquivo, não varia.
-
-## Checklist
-
-### Ovo (compartilhado, 1 arquivo só)
-- [ ] `ovo.png`
-  Prompt:
+Arquivo final de cada célula: `public/creatures/<tipo>/<estagio>.png` (estágios: `ovo`, `bebe`, `crianca`, `adolescente`, `adulto`).
 
 ---
 
-### Fera — comum · foco Ataque
-- [ ] `fera/bebe.png` — Prompt:
-- [ ] `fera/crianca.png` — Prompt:
-- [ ] `fera/adolescente.png` — Prompt:
-- [ ] `fera/adulto.png` — Prompt:
+## Grade 1 — Comuns (Fera, Dragão, Fada, Anjo)
 
-### Dragão — comum · foco Defesa
-- [ ] `dragao/bebe.png` — Prompt:
-- [ ] `dragao/crianca.png` — Prompt:
-- [ ] `dragao/adolescente.png` — Prompt:
-- [ ] `dragao/adulto.png` — Prompt:
+```
+pixel art sprite sheet, 16-bit SNES RPG style, 4 rows x 5 columns grid,
+thin grid lines separating cells, transparent background, front-facing
+centered pose, crisp pixel edges, limited flat color palette, no gradients,
+no text or labels in image. Each row is the same creature evolving left to
+right through 5 life stages, growing larger and more detailed each column.
 
-### Fada — comum · foco Velocidade
-- [ ] `fada/bebe.png` — Prompt:
-- [ ] `fada/crianca.png` — Prompt:
-- [ ] `fada/adolescente.png` — Prompt:
-- [ ] `fada/adulto.png` — Prompt:
+Column order (left to right): Egg (cracked shell hinting at the creature
+inside) -> Baby (tiny, round, big eyes, minimal features) -> Child (short
+limbs, simple face, core traits visible) -> Teen (taller, sharper features,
+type traits more developed) -> Adult (full detailed final form, imposing
+pose, all type traits prominent)
 
-### Anjo — comum · foco Inteligência
-- [ ] `anjo/bebe.png` — Prompt:
-- [ ] `anjo/crianca.png` — Prompt:
-- [ ] `anjo/adolescente.png` — Prompt:
-- [ ] `anjo/adulto.png` — Prompt:
+Row 1 "Fera": fierce beast-type, orange and red fur, wolf-and-bear
+inspired, fangs and claws that grow more prominent each stage
+Row 2 "Dragão": armored dragon-type, emerald green scales, thick shell,
+small horns and wings that grow each stage
+Row 3 "Fada": fae/pixie-type, light pink, delicate wings and antennae
+that grow more ornate each stage
+Row 4 "Anjo": angel-type, white and pale gold, serene face, small halo
+that grows into feathered wings each stage
+```
+
+**Recorte:**
+| Linha | Ovo | Bebê | Criança | Adolescente | Adulto |
+|---|---|---|---|---|---|
+| Fera | `fera/ovo.png` | `fera/bebe.png` | `fera/crianca.png` | `fera/adolescente.png` | `fera/adulto.png` |
+| Dragão | `dragao/ovo.png` | `dragao/bebe.png` | `dragao/crianca.png` | `dragao/adolescente.png` | `dragao/adulto.png` |
+| Fada | `fada/ovo.png` | `fada/bebe.png` | `fada/crianca.png` | `fada/adolescente.png` | `fada/adulto.png` |
+| Anjo | `anjo/ovo.png` | `anjo/bebe.png` | `anjo/crianca.png` | `anjo/adolescente.png` | `anjo/adulto.png` |
 
 ---
 
-### Primitivo — raro · foco Ataque + Defesa
-- [ ] `primitivo/bebe.png` — Prompt:
-- [ ] `primitivo/crianca.png` — Prompt:
-- [ ] `primitivo/adolescente.png` — Prompt:
-- [ ] `primitivo/adulto.png` — Prompt:
+## Grade 2 — Raros (Primitivo, Fantasma, Demônio, Celestial)
 
-### Fantasma — raro · foco Defesa + Velocidade
-- [ ] `fantasma/bebe.png` — Prompt:
-- [ ] `fantasma/crianca.png` — Prompt:
-- [ ] `fantasma/adolescente.png` — Prompt:
-- [ ] `fantasma/adulto.png` — Prompt:
+```
+pixel art sprite sheet, 16-bit SNES RPG style, 4 rows x 5 columns grid,
+thin grid lines separating cells, transparent background, front-facing
+centered pose, crisp pixel edges, limited flat color palette, no gradients,
+no text or labels in image. Each row is the same creature evolving left to
+right through 5 life stages, growing larger and more detailed each column.
 
-### Demônio — raro · foco Velocidade + Ataque
-- [ ] `demonio/bebe.png` — Prompt:
-- [ ] `demonio/crianca.png` — Prompt:
-- [ ] `demonio/adolescente.png` — Prompt:
-- [ ] `demonio/adulto.png` — Prompt:
+Column order (left to right): Egg (cracked shell hinting at the creature
+inside) -> Baby (tiny, round, big eyes, minimal features) -> Child (short
+limbs, simple face, core traits visible) -> Teen (taller, sharper features,
+type traits more developed) -> Adult (full detailed final form, imposing
+pose, all type traits prominent)
 
-### Celestial — raro · foco Inteligência + Defesa
-- [ ] `celestial/bebe.png` — Prompt:
-- [ ] `celestial/crianca.png` — Prompt:
-- [ ] `celestial/adolescente.png` — Prompt:
-- [ ] `celestial/adulto.png` — Prompt:
+Row 1 "Primitivo": ancient primal beast-type, tan and brown thick hide,
+small tusks and stone-like markings that grow each stage
+Row 2 "Fantasma": ghostly spirit-type, pale translucent blue, wispy
+trailing tail instead of legs, glowing eyes that grow eerier each stage
+Row 3 "Demônio": swift dark imp-type, deep purple, small horns and a
+pointed tail that grow sharper each stage
+Row 4 "Celestial": cosmic guardian-type, gold with faint starry patterns,
+a small orbiting shard/ring that grows more elaborate each stage
+```
 
-## Como entregar
+**Recorte:**
+| Linha | Ovo | Bebê | Criança | Adolescente | Adulto |
+|---|---|---|---|---|---|
+| Primitivo | `primitivo/ovo.png` | `primitivo/bebe.png` | `primitivo/crianca.png` | `primitivo/adolescente.png` | `primitivo/adulto.png` |
+| Fantasma | `fantasma/ovo.png` | `fantasma/bebe.png` | `fantasma/crianca.png` | `fantasma/adolescente.png` | `fantasma/adulto.png` |
+| Demônio | `demonio/ovo.png` | `demonio/bebe.png` | `demonio/crianca.png` | `demonio/adolescente.png` | `demonio/adulto.png` |
+| Celestial | `celestial/ovo.png` | `celestial/bebe.png` | `celestial/crianca.png` | `celestial/adolescente.png` | `celestial/adulto.png` |
 
-Pode colar as imagens em qualquer lugar (anexar aqui na conversa, subir numa pasta, etc.) — só marca o checkbox e cola o prompt usado em cada linha pra eu saber qual arquivo é qual e manter o histórico do que já foi gerado.
+---
+
+Me manda as imagens (inteiras, já recortadas ou não — eu recorto se precisar) e eu encaixo tudo no jogo.
