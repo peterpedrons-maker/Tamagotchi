@@ -43,15 +43,22 @@ export const TYPE_INFO: Record<CreatureType, TypeInfo> = {
 };
 
 export const CREATURE_TYPES = Object.keys(TYPE_INFO) as CreatureType[];
+export const COMMON_CREATURE_TYPES = CREATURE_TYPES.filter((type) => TYPE_INFO[type].rarity === "comum");
 
-/** Rolls a random type for a newly created egg, weighted so rare types are uncommon. */
-export function rollCreatureType(): CreatureType {
-  const total = CREATURE_TYPES.reduce((sum, type) => sum + TYPE_INFO[type].weight, 0);
+/**
+ * Rolls a random type for a newly created egg. The standard "new pet" flow (starting
+ * out, or getting a new egg after your pet dies) only ever rolls a common type — rare
+ * types have to be obtained some other way (not built yet), so pass `includeRare` only
+ * from that future acquisition path.
+ */
+export function rollCreatureType(includeRare = false): CreatureType {
+  const pool = includeRare ? CREATURE_TYPES : COMMON_CREATURE_TYPES;
+  const total = pool.reduce((sum, type) => sum + TYPE_INFO[type].weight, 0);
   let roll = Math.random() * total;
-  for (const type of CREATURE_TYPES) {
+  for (const type of pool) {
     const weight = TYPE_INFO[type].weight;
     if (roll < weight) return type;
     roll -= weight;
   }
-  return CREATURE_TYPES[0];
+  return pool[0];
 }

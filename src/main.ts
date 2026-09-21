@@ -257,6 +257,7 @@ const game = new Phaser.Game({
   width: 300,
   height: 320,
   transparent: true,
+  pixelArt: true,
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,

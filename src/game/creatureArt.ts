@@ -26,6 +26,13 @@ function textureKey(stage: Stage, type: CreatureType, mood: Mood, sick: boolean,
   return `pet-${stage}-${type}-${mood}-${sick ? "sick" : "ok"}-${sleeping ? "sleep" : "awake"}`;
 }
 
+const FULL_SIZE = 220;
+// Chunky, low-res pixel grid the smooth drawing gets downsampled to — combined with
+// the game's pixelArt render mode, this gives the blocky 16-bit look without hand
+// placing pixels. Swap this whole module out once real PNG art lands.
+export const CREATURE_PIXEL_SIZE = 44;
+const PIXEL_SCALE = FULL_SIZE / CREATURE_PIXEL_SIZE;
+
 /** Procedurally draws (and caches) a texture for the given creature state. */
 export function ensureCreatureTexture(
   scene: Phaser.Scene,
@@ -38,7 +45,7 @@ export function ensureCreatureTexture(
   const key = textureKey(stage, type, mood, sick, sleeping);
   if (scene.textures.exists(key)) return key;
 
-  const size = 220;
+  const size = FULL_SIZE;
   const cx = size / 2;
   const cy = size / 2;
   const g = scene.add.graphics();
@@ -121,7 +128,19 @@ export function ensureCreatureTexture(
     }
   }
 
-  g.generateTexture(key, size, size);
+  const fullKey = `${key}-full`;
+  g.generateTexture(fullKey, size, size);
   g.destroy();
+
+  // Downsample the smooth drawing onto a small pixel grid, then let the game's
+  // pixelArt (nearest-neighbor) scaling blow it back up crisp and blocky.
+  const image = scene.add.image(0, 0, fullKey).setOrigin(0).setScale(1 / PIXEL_SCALE);
+  const rt = scene.add.renderTexture(0, 0, CREATURE_PIXEL_SIZE, CREATURE_PIXEL_SIZE);
+  rt.draw(image, 0, 0);
+  rt.saveTexture(key);
+  rt.destroy();
+  image.destroy();
+  scene.textures.remove(fullKey);
+
   return key;
 }
