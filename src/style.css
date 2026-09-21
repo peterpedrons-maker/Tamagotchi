@@ -131,11 +131,12 @@ button {
   color: #cfe6ff;
   min-width: 0;
 }
+/* Sized to sit exactly inside the bar outline already drawn in the artwork --
+   this element itself stays invisible, only the fill paints. */
 .xp-bar {
   flex: 1;
-  height: 0.6cqw;
-  background: rgba(4, 12, 24, 0.55);
-  border-radius: 5px;
+  height: 2.1cqh;
+  border-radius: 999px;
   overflow: hidden;
 }
 .xp-fill {
@@ -151,22 +152,22 @@ button {
   width: 33.33%;
   height: 13.18%;
   display: flex;
-  align-items: center;
 }
 .vital {
   flex: 1;
   min-width: 0;
   display: flex;
-  align-items: center;
-  height: 100%;
+  align-items: flex-start;
+  padding-top: 8.3cqh;
   padding-left: 5.1cqw;
   gap: 0.6cqw;
 }
+/* Sized/positioned to sit exactly inside the bar outline already drawn in the
+   artwork -- this element itself stays invisible, only the fill paints. */
 .vital-bar {
   flex: 1;
-  height: 0.8cqw;
-  background: rgba(4, 12, 24, 0.4);
-  border-radius: 6px;
+  height: 2.6cqh;
+  border-radius: 999px;
   overflow: hidden;
   min-width: 10%;
 }
@@ -333,21 +334,21 @@ button {
   height: 23.14%;
   display: flex;
   flex-direction: column;
-  padding-top: 7cqh;
-  gap: 1cqh;
+  padding-top: 7.03cqh;
 }
 .stat-row {
   flex: 1;
   display: flex;
   align-items: center;
-  padding-left: 4.7cqw;
-  padding-right: 1.5cqw;
+  padding-left: 4.04cqw;
+  padding-right: 4.49cqw;
 }
+/* Sized/positioned to sit exactly inside the bar outline already drawn in the
+   artwork -- this element itself stays invisible, only the fill paints. */
 .stat-bar {
   width: 100%;
-  height: 1cqw;
-  background: rgba(4, 12, 24, 0.4);
-  border-radius: 6px;
+  height: 2.6cqh;
+  border-radius: 999px;
   overflow: hidden;
 }
 .stat-fill {
