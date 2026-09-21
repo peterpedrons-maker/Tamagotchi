@@ -1,4 +1,61 @@
-# Prompts de Arte das Criaturas
+# Prompts de Arte
+
+## ⏸ Criaturas — pausado
+
+Vamos esperar a mecânica de humor/expressão (feliz, triste, doente, etc.) estar pronta no código antes de gerar essas artes — assim não precisa redesenhar tudo depois. Os prompts abaixo continuam aqui prontos pra quando chegar a hora.
+
+---
+
+# 🖼 Interface do jogo — pode fazer já
+
+3 prompts separados (ícones, cenário do quarto, moldura dos painéis). Nada de criatura aqui, só o "casco" do jogo.
+
+## Ícones
+
+```
+pixel art icon set, 16-bit SNES RPG UI style, 32x32 px each, consistent
+stroke weight and style across all icons, cyan-and-gold accent colors on
+a transparent background, simple bold silhouettes readable at small
+size, no text or labels in image, arranged in a clean grid, 4 columns.
+
+Icons needed, in this order:
+1. house (home) 2. heart 3. dumbbell 4. game controller
+5. sword 6. backpack 7. open book 8. gear/cog
+9. apple 10. bed 11. broom 12. wrapped gift
+13. medicine pill 14. padlock 15. shield 16. wind swirl
+17. brain 18. coin 19. expand/fullscreen arrows 20. (blank/spare)
+```
+
+**Recorte:** salva cada ícone como `public/icons/game/<nome>.png` — nomes na ordem: `home, heart, dumbbell, gamepad, sword, backpack, book, gear, apple, bed, broom, gift, pill, lock, shield, wind, brain, coin, expand`.
+
+## Cenário do quarto
+
+```
+pixel art background scene, 16-bit SNES RPG style, highly detailed, cozy
+pet's bedroom interior, wide landscape composition, warm wood tones,
+window with a small hill and sky view, a bed, a bookshelf, a round rug
+on the floor, soft ambient lighting, no characters or creatures in the
+scene, empty floor space in the center-bottom reserved for a pet sprite
+to stand on, no text or labels in image.
+```
+
+**Arquivo:** `public/backgrounds/room.png`
+
+## Moldura dos painéis (janelas estilo RPG)
+
+```
+pixel art UI panel/dialogue box frame, 16-bit SNES RPG style (like
+Chrono Trigger or Final Fantasy VI menu windows), dark navy blue fill,
+thin cyan-glow pixel border, slightly rounded corners, subtle inner
+shadow, transparent background outside the frame, single representative
+panel large enough to see corner and edge detail clearly, no text inside.
+```
+
+**Arquivo:** `public/ui/panel-frame.png`
+
+---
+
+# 🐣 Criaturas (grades prontas para quando formos gerar)
 
 Cada bloco é uma grade **2 linhas (bichos) × 5 colunas (Ovo → Bebê → Criança → Adolescente → Adulto)**. Menos bicho por imagem = mais detalhe em cada um.
 
