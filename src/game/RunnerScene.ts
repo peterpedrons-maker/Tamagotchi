@@ -24,15 +24,21 @@ interface Biome {
   ground: number;
   track: number;
   decor: number;
+  bgKey?: string;
 }
 
 const BIOMES: Biome[] = [
-  { name: "Floresta", skyTop: 0x1b2a4a, skyBottom: 0x4a6fa5, ground: 0x24522f, track: 0x3a3226, decor: 0x1d3d24 },
+  { name: "Floresta", skyTop: 0x1b2a4a, skyBottom: 0x4a6fa5, ground: 0x24522f, track: 0x3a3226, decor: 0x1d3d24, bgKey: "bg-floresta" },
   { name: "Caverna de cristal", skyTop: 0x120a24, skyBottom: 0x3a1d5c, ground: 0x241238, track: 0x2c1840, decor: 0x7b4fd6 },
   { name: "Deserto", skyTop: 0xff8a3d, skyBottom: 0xffd27a, ground: 0xd99a4e, track: 0xc4813a, decor: 0x8a5a2a },
   { name: "Geleira", skyTop: 0x0b2540, skyBottom: 0x8fd7ea, ground: 0xdff3fb, track: 0xb9e3f0, decor: 0x6fb9d6 },
 ];
 const BIOME_DISTANCE = 450;
+
+// rider.png: 5 poses in a single row (straight-A, straight-B, lean-left, lean-right, wipeout)
+const RIDER_FRAME = { straightA: 0, straightB: 1, leanLeft: 2, leanRight: 3, wipeout: 4 };
+const RIDER_DISPLAY_SCALE = 0.6;
+const COIN_DISPLAY_SCALE = 0.11;
 
 type EntityKind = "obstacle" | "coin" | "decor";
 interface Entity {
@@ -41,11 +47,14 @@ interface Entity {
   lane: Lane;
   side?: -1 | 1;
   passed?: boolean;
+  sprite?: Phaser.GameObjects.Image;
 }
 
 export class RunnerScene extends Phaser.Scene {
   private skyGfx!: Phaser.GameObjects.Graphics;
+  private bgImage!: Phaser.GameObjects.Image;
   private worldGfx!: Phaser.GameObjects.Graphics;
+  private playerSprite!: Phaser.GameObjects.Sprite;
   private hudDistance!: Phaser.GameObjects.Text;
   private hudCoins!: Phaser.GameObjects.Text;
   private hint!: Phaser.GameObjects.Text;
@@ -66,19 +75,21 @@ export class RunnerScene extends Phaser.Scene {
   private biomeIndex = -1;
   private gameOver = false;
 
-  private onGameOver?: (distance: number) => void;
-
   constructor() {
     super("runner");
   }
 
-  init(data: { onGameOver?: (distance: number) => void }) {
-    this.onGameOver = data.onGameOver;
+  preload(): void {
+    this.load.spritesheet("rider", "/sprites/rider.png", { frameWidth: 320, frameHeight: 320 });
+    this.load.image("coin", "/sprites/coin.png");
+    this.load.image("bg-floresta", "/backgrounds/floresta.jpg");
   }
 
   create(): void {
     this.skyGfx = this.add.graphics();
+    this.bgImage = this.add.image(0, 0, "bg-floresta").setOrigin(0.5, 1).setVisible(false);
     this.worldGfx = this.add.graphics();
+    this.playerSprite = this.add.sprite(0, 0, "rider", RIDER_FRAME.straightA).setOrigin(0.5, 0.92).setDepth(5);
 
     this.hudDistance = this.add
       .text(18, 14, "0 m", { fontFamily: "system-ui, sans-serif", fontSize: "26px", color: "#f3f7ff", fontStyle: "800" })
@@ -111,6 +122,7 @@ export class RunnerScene extends Phaser.Scene {
     this.laneIndex = 0;
     this.playerX = this.laneX(0, PLAYER_T);
     this.playerTilt = 0;
+    for (const e of this.entities) e.sprite?.destroy();
     this.entities = [];
     this.nextObstacleIn = 1;
     this.nextDecorIn = 0.2;
@@ -165,8 +177,19 @@ export class RunnerScene extends Phaser.Scene {
     this.biomeIndex = index;
     const w = this.scale.width;
     this.skyGfx.clear();
-    this.skyGfx.fillGradientStyle(biome.skyTop, biome.skyTop, biome.skyBottom, biome.skyBottom, 1);
-    this.skyGfx.fillRect(0, 0, w, this.horizonY() + 2);
+
+    if (biome.bgKey && this.textures.exists(biome.bgKey)) {
+      const src = this.textures.get(biome.bgKey).getSourceImage() as HTMLImageElement;
+      const aspect = src.width / src.height;
+      const dispH = w / aspect;
+      this.bgImage.setTexture(biome.bgKey).setDisplaySize(w, dispH).setPosition(w / 2, this.horizonY() + 2).setVisible(true);
+      this.skyGfx.fillStyle(biome.skyTop, 1);
+      this.skyGfx.fillRect(0, 0, w, Math.max(0, this.horizonY() + 2 - dispH));
+    } else {
+      this.bgImage.setVisible(false);
+      this.skyGfx.fillGradientStyle(biome.skyTop, biome.skyTop, biome.skyBottom, biome.skyBottom, 1);
+      this.skyGfx.fillRect(0, 0, w, this.horizonY() + 2);
+    }
   }
 
   private currentBiome(): Biome {
@@ -219,7 +242,11 @@ export class RunnerScene extends Phaser.Scene {
         this.coins += 1;
       }
     }
-    this.entities = this.entities.filter((e) => e.t <= 1.1 && !(e.kind === "coin" && e.passed));
+    this.entities = this.entities.filter((e) => {
+      const alive = e.t <= 1.1 && !(e.kind === "coin" && e.passed);
+      if (!alive) e.sprite?.destroy();
+      return alive;
+    });
 
     this.draw();
     this.hudDistance.setText(`${Math.floor(this.distance)} m`);
@@ -245,7 +272,8 @@ export class RunnerScene extends Phaser.Scene {
   private spawnCoinRun(): void {
     const lane = Phaser.Math.RND.pick(LANES as unknown as Lane[]);
     for (let i = 0; i < 4; i++) {
-      this.entities.push({ kind: "coin", t: -i * 0.06, lane });
+      const sprite = this.add.image(0, 0, "coin").setDepth(4).setVisible(false);
+      this.entities.push({ kind: "coin", t: -i * 0.06, lane, sprite });
     }
   }
 
@@ -256,9 +284,10 @@ export class RunnerScene extends Phaser.Scene {
 
   private triggerGameOver(): void {
     this.gameOver = true;
+    this.playerSprite.setFrame(RIDER_FRAME.wipeout).setRotation(0);
     this.cameras.main.shake(180, 0.01);
     this.cameras.main.flash(120, 255, 80, 80);
-    this.onGameOver?.(Math.floor(this.distance));
+    this.game.events.emit("gameover", Math.floor(this.distance));
   }
 
   private draw(): void {
@@ -317,10 +346,7 @@ export class RunnerScene extends Phaser.Scene {
         g.fillRect(x - 3 * s, y + 4 * s, 6 * s, 10 * s);
       } else if (e.kind === "coin") {
         const x = this.laneX(e.lane, e.t);
-        g.fillStyle(0xffd23f, 1);
-        g.fillCircle(x, y - 10 * s, 8 * s);
-        g.lineStyle(2 * s, 0xb8860b, 1);
-        g.strokeCircle(x, y - 10 * s, 8 * s);
+        e.sprite?.setPosition(x, y - 10 * s).setScale(COIN_DISPLAY_SCALE * s).setVisible(true).setDepth(4 + e.t);
       } else {
         const x = this.laneX(e.lane, e.t);
         const w2 = this.halfWidth(e.t) * 0.62;
@@ -335,15 +361,13 @@ export class RunnerScene extends Phaser.Scene {
     const px = this.playerX;
     const py = this.screenY(PLAYER_T);
     const ps = this.scaleAt(PLAYER_T);
-    g.save();
-    g.translateCanvas(px, py);
-    g.rotateCanvas(Phaser.Math.DegToRad(this.playerTilt));
-    g.fillStyle(0x1c1c22, 1);
-    g.fillEllipse(0, 4 * ps, 46 * ps, 16 * ps);
-    g.fillStyle(0x2f7cff, 1);
-    g.fillRoundedRect(-16 * ps, -34 * ps, 32 * ps, 34 * ps, 10 * ps);
-    g.fillStyle(0xffd7b3, 1);
-    g.fillCircle(0, -40 * ps, 12 * ps);
-    g.restore();
+    this.playerSprite.setPosition(px, py);
+    this.playerSprite.setScale(RIDER_DISPLAY_SCALE * ps);
+    if (!this.gameOver) {
+      this.playerSprite.setRotation(Phaser.Math.DegToRad(this.playerTilt));
+      if (this.playerTilt < -3) this.playerSprite.setFrame(RIDER_FRAME.leanLeft);
+      else if (this.playerTilt > 3) this.playerSprite.setFrame(RIDER_FRAME.leanRight);
+      else this.playerSprite.setFrame(Math.floor(this.elapsed * 4) % 2 === 0 ? RIDER_FRAME.straightA : RIDER_FRAME.straightB);
+    }
   }
 }

@@ -25,18 +25,16 @@ const game = new Phaser.Game({
   scene: [RunnerScene],
 });
 
-function startRun(): void {
-  overlay.classList.remove("show");
-  game.scene.start("runner", { onGameOver: handleGameOver });
-}
-
-function handleGameOver(distance: number): void {
+// The runner scene is emitted on the shared Game event bus (rather than
+// passed as scene.start() data) so restart timing can never race a scene
+// still booting — this listener is wired once, independent of which scene
+// instance ends up running.
+game.events.on("gameover", (distance: number) => {
   finalDistanceEl.textContent = String(distance);
   overlay.classList.add("show");
-}
+});
 
-restartBtn.addEventListener("click", startRun);
-
-game.events.once(Phaser.Core.Events.READY, () => {
-  game.scene.start("runner", { onGameOver: handleGameOver });
+restartBtn.addEventListener("click", () => {
+  overlay.classList.remove("show");
+  game.scene.start("runner");
 });
