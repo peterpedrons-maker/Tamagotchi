@@ -2,29 +2,13 @@
   color-scheme: dark;
 }
 
-* {
-  box-sizing: border-box;
-}
-
-html,
 body {
   margin: 0;
-  height: 100%;
-  overflow: hidden;
-  background: #05060a;
-  font-family: system-ui, sans-serif;
-  touch-action: none;
-}
-
-#game-root {
-  position: fixed;
-  inset: 0;
+  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-#game-root canvas {
-  max-width: 100%;
-  max-height: 100%;
+  background: #0a1120;
+  color: #e6edf7;
+  font-family: system-ui, sans-serif;
 }
