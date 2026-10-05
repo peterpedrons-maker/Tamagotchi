@@ -1,24 +1,29 @@
 import Phaser from "phaser";
 
 /**
- * First physics slice: a static level with a launcher, drag-to-aim
- * slingshot-style shot, a ball that bounces for real (Matter.js, bundled
- * with Phaser) off walls and pegs, and a turn counter. Everything is
- * placeholder shapes — the point here is proving the bounce feels good
- * before any art or scoring/combo systems go on top.
+ * Pinball-roguelike core loop: launcher at the BOTTOM, you drag-aim and
+ * fire the ball upward into the peg field, gravity pulls it back down,
+ * and if it falls past the launcher you lose that ball (no floor — the
+ * bottom of the world is an open drain, not a wall). Score comes from
+ * hits; the run ends when you're out of balls. Placeholder shapes still
+ * — roguelike powers (split ball, homing, etc.) come after this core
+ * loop is confirmed to feel right.
  */
 
 const WIDTH = 480;
 const HEIGHT = 800;
-const LAUNCHER = { x: WIDTH / 2, y: 70 };
+const LAUNCHER = { x: WIDTH / 2, y: HEIGHT - 60 };
 const BALL_RADIUS = 10;
-const MAX_TURNS = 15;
+const START_BALLS = 5;
 const MIN_DRAG = 20;
-const MAX_DRAG = 140;
-const MIN_SPEED = 6;
-const MAX_SPEED = 20;
+const MAX_DRAG = 160;
+const MIN_SPEED = 8;
+const MAX_SPEED = 24;
 const SETTLE_SPEED = 0.15;
 const SETTLE_FRAMES = 40;
+const HIT_SCORE = 10;
+const DESTROY_BONUS = 40;
+const CLEAR_BONUS = 300;
 
 interface Peg {
   body: MatterJS.BodyType;
@@ -34,11 +39,12 @@ export class ArenaScene extends Phaser.Scene {
   private aimLine!: Phaser.GameObjects.Graphics;
 
   private aiming = false;
-  private aimStart = new Phaser.Math.Vector2();
   private settleCounter = 0;
 
-  private turnsLeft = MAX_TURNS;
-  private hudTurns!: Phaser.GameObjects.Text;
+  private ballsLeft = START_BALLS;
+  private score = 0;
+  private hudBalls!: Phaser.GameObjects.Text;
+  private hudScore!: Phaser.GameObjects.Text;
   private hudHits!: Phaser.GameObjects.Text;
   private hudMessage!: Phaser.GameObjects.Text;
   private shotHits = 0;
@@ -53,25 +59,34 @@ export class ArenaScene extends Phaser.Scene {
     this.ball = null;
     this.aiming = false;
     this.settleCounter = 0;
-    this.turnsLeft = MAX_TURNS;
+    this.ballsLeft = START_BALLS;
+    this.score = 0;
     this.shotHits = 0;
     this.gameEnded = false;
 
-    this.matter.world.setBounds(0, 0, WIDTH, HEIGHT, 32);
+    // No bottom wall: the ball falls out of the world if it drains past the
+    // launcher, which is exactly the "lose this ball" signal we want.
+    this.matter.world.setBounds(0, 0, WIDTH, HEIGHT, 32, true, true, true, false);
     this.cameras.main.setBackgroundColor("#161a2e");
 
     this.buildPegs();
+    this.drawLauncher();
 
-    this.add.circle(LAUNCHER.x, LAUNCHER.y, 14, 0xffd76a);
     this.aimLine = this.add.graphics();
 
-    this.hudTurns = this.add.text(16, 14, `Tiros: ${this.turnsLeft}`, {
+    this.hudScore = this.add.text(16, 14, "Pontos: 0", {
       fontFamily: "system-ui, sans-serif",
-      fontSize: "20px",
+      fontSize: "22px",
       color: "#f3f7ff",
       fontStyle: "800",
     });
-    this.hudHits = this.add.text(16, 42, "", {
+    this.hudBalls = this.add.text(16, 44, `Bolas: ${this.ballsLeft}`, {
+      fontFamily: "system-ui, sans-serif",
+      fontSize: "15px",
+      color: "#6ee7ff",
+      fontStyle: "700",
+    });
+    this.hudHits = this.add.text(16, 68, "", {
       fontFamily: "system-ui, sans-serif",
       fontSize: "14px",
       color: "#9fe0a8",
@@ -80,7 +95,7 @@ export class ArenaScene extends Phaser.Scene {
     this.hudMessage = this.add
       .text(WIDTH / 2, HEIGHT / 2, "", {
         fontFamily: "system-ui, sans-serif",
-        fontSize: "32px",
+        fontSize: "30px",
         color: "#ffffff",
         fontStyle: "800",
         align: "center",
@@ -89,7 +104,7 @@ export class ArenaScene extends Phaser.Scene {
       .setDepth(20)
       .setShadow(0, 2, "#000", 6, true, true);
 
-    this.input.on("pointerdown", (p: Phaser.Input.Pointer) => this.startAim(p));
+    this.input.on("pointerdown", () => this.startAim());
     this.input.on("pointermove", (p: Phaser.Input.Pointer) => this.updateAim(p));
     this.input.on("pointerup", (p: Phaser.Input.Pointer) => this.releaseAim(p));
 
@@ -101,19 +116,25 @@ export class ArenaScene extends Phaser.Scene {
     });
   }
 
+  private drawLauncher(): void {
+    this.add.circle(LAUNCHER.x, LAUNCHER.y, 14, 0xffd76a);
+  }
+
   private buildPegs(): void {
     const layout: Array<{ x: number; y: number; hp: number }> = [
-      { x: 120, y: 220, hp: 1 },
-      { x: 240, y: 180, hp: 1 },
-      { x: 360, y: 220, hp: 1 },
-      { x: 90, y: 320, hp: 1 },
-      { x: 390, y: 320, hp: 1 },
-      { x: 180, y: 340, hp: 2 },
-      { x: 300, y: 340, hp: 2 },
-      { x: 240, y: 420, hp: 3 },
-      { x: 150, y: 460, hp: 1 },
-      { x: 330, y: 460, hp: 1 },
-      { x: 240, y: 550, hp: 2 },
+      { x: 120, y: 160, hp: 1 },
+      { x: 240, y: 120, hp: 1 },
+      { x: 360, y: 160, hp: 1 },
+      { x: 90, y: 260, hp: 1 },
+      { x: 390, y: 260, hp: 1 },
+      { x: 180, y: 280, hp: 2 },
+      { x: 300, y: 280, hp: 2 },
+      { x: 240, y: 360, hp: 3 },
+      { x: 150, y: 400, hp: 1 },
+      { x: 330, y: 400, hp: 1 },
+      { x: 240, y: 480, hp: 2 },
+      { x: 110, y: 500, hp: 1 },
+      { x: 370, y: 500, hp: 1 },
     ];
 
     for (const spot of layout) {
@@ -137,10 +158,9 @@ export class ArenaScene extends Phaser.Scene {
     return 0xfacc15;
   }
 
-  private startAim(p: Phaser.Input.Pointer): void {
-    if (this.ball || this.turnsLeft <= 0 || this.gameEnded) return;
+  private startAim(): void {
+    if (this.ball || this.ballsLeft <= 0 || this.gameEnded) return;
     this.aiming = true;
-    this.aimStart.set(p.x, p.y);
   }
 
   private updateAim(p: Phaser.Input.Pointer): void {
@@ -188,9 +208,9 @@ export class ArenaScene extends Phaser.Scene {
     this.ballGfx = this.add.circle(LAUNCHER.x, LAUNCHER.y, BALL_RADIUS, 0x6ee7ff);
     this.settleCounter = 0;
 
-    this.turnsLeft -= 1;
+    this.ballsLeft -= 1;
     this.shotHits = 0;
-    this.hudTurns.setText(`Tiros: ${this.turnsLeft}`);
+    this.hudBalls.setText(`Bolas: ${this.ballsLeft}`);
     this.hudHits.setText("");
   }
 
@@ -201,9 +221,10 @@ export class ArenaScene extends Phaser.Scene {
 
     peg.hp -= 1;
     this.shotHits += 1;
-    this.hudHits.setText(`Acertos neste tiro: ${this.shotHits}`);
+    this.score += HIT_SCORE;
 
     if (peg.hp <= 0) {
+      this.score += DESTROY_BONUS;
       this.matter.world.remove(peg.body);
       this.tweens.add({
         targets: peg.gfx,
@@ -216,6 +237,9 @@ export class ArenaScene extends Phaser.Scene {
       peg.gfx.setFillStyle(this.colorForHp(peg.hp, peg.maxHp));
       this.tweens.add({ targets: peg.gfx, scale: 1.15, duration: 60, yoyo: true });
     }
+
+    this.hudScore.setText(`Pontos: ${this.score}`);
+    this.hudHits.setText(this.shotHits > 1 ? `Combo: ${this.shotHits}x` : "");
   }
 
   update(): void {
@@ -225,8 +249,8 @@ export class ArenaScene extends Phaser.Scene {
       this.ballGfx.setPosition(this.ball.position.x, this.ball.position.y);
 
       const speed = Math.hypot(this.ball.velocity.x, this.ball.velocity.y);
-      const outOfBounds = this.ball.position.y > HEIGHT + 40;
-      if (outOfBounds) {
+      const drained = this.ball.position.y > HEIGHT + 40;
+      if (drained) {
         this.removeBall();
       } else if (speed < SETTLE_SPEED) {
         this.settleCounter += 1;
@@ -237,10 +261,14 @@ export class ArenaScene extends Phaser.Scene {
     }
 
     const pegsLeft = this.pegs.filter((pg) => pg.hp > 0).length;
-    if (!this.ball && pegsLeft === 0) {
-      this.endGame("Fase completa!");
-    } else if (!this.ball && this.turnsLeft <= 0 && pegsLeft > 0) {
-      this.endGame("Sem tiros — tente de novo");
+    if (!this.ball && !this.gameEnded) {
+      if (pegsLeft === 0) {
+        this.score += CLEAR_BONUS;
+        this.hudScore.setText(`Pontos: ${this.score}`);
+        this.endGame(`Campo limpo! +${CLEAR_BONUS}\nPontuação final: ${this.score}`);
+      } else if (this.ballsLeft <= 0) {
+        this.endGame(`Fim de jogo\nPontuação final: ${this.score}`);
+      }
     }
   }
 
