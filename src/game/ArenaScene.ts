@@ -2,10 +2,11 @@ import Phaser from "phaser";
 
 /**
  * Pinball-roguelike core loop: launcher at the BOTTOM, you drag-aim and
- * fire the ball upward into the peg field, gravity pulls it back down,
- * and if it falls past the launcher you lose that ball (no floor — the
- * bottom of the world is an open drain, not a wall). Score comes from
- * hits; the run ends when you're out of balls.
+ * fire the ball upward into the peg field, gravity pulls it back down.
+ * There's no drain — the floor is solid, so the ball just loses energy
+ * (air + ground friction) on every bounce and naturally comes to rest.
+ * Once it's fully stopped, that shot is over and you launch again. Score
+ * comes from hits; the run ends when you're out of shots.
  *
  * Still no external art — this pass is about making the procedural look
  * (glowing orbs, particles, a cabinet-style frame) read as a real game
@@ -21,8 +22,9 @@ const MIN_DRAG = 20;
 const MAX_DRAG = 160;
 const MIN_SPEED = 8;
 const MAX_SPEED = 24;
-const SETTLE_SPEED = 0.15;
-const SETTLE_FRAMES = 40;
+const SETTLE_SPEED = 0.35;
+const SETTLE_FRAMES = 30;
+const MAX_SHOT_MS = 9000;
 const HIT_SCORE = 10;
 const DESTROY_BONUS = 40;
 const CLEAR_BONUS = 300;
@@ -57,6 +59,7 @@ export class ArenaScene extends Phaser.Scene {
 
   private aiming = false;
   private settleCounter = 0;
+  private shotElapsedMs = 0;
 
   private ballsLeft = START_BALLS;
   private score = 0;
@@ -77,6 +80,7 @@ export class ArenaScene extends Phaser.Scene {
     this.ball = null;
     this.aiming = false;
     this.settleCounter = 0;
+    this.shotElapsedMs = 0;
     this.ballsLeft = START_BALLS;
     this.score = 0;
     this.shotHits = 0;
@@ -85,9 +89,7 @@ export class ArenaScene extends Phaser.Scene {
 
     this.bakeTextures();
 
-    // No bottom wall: the ball falls out of the world if it drains past the
-    // launcher, which is exactly the "lose this ball" signal we want.
-    this.matter.world.setBounds(0, 0, WIDTH, HEIGHT, 32, true, true, true, false);
+    this.matter.world.setBounds(0, 0, WIDTH, HEIGHT, 32);
 
     this.buildBackdrop();
     this.buildPegs();
@@ -383,15 +385,16 @@ export class ArenaScene extends Phaser.Scene {
 
   private fireBall(angle: number, power: number): void {
     const body = this.matter.add.circle(LAUNCHER.x, LAUNCHER.y, BALL_RADIUS, {
-      restitution: 0.88,
-      friction: 0.01,
-      frictionAir: 0.0008,
+      restitution: 0.55,
+      friction: 0.08,
+      frictionAir: 0.006,
       label: "ball",
     });
     this.matter.body.setVelocity(body, { x: Math.cos(angle) * power, y: Math.sin(angle) * power });
     this.ball = body;
     this.ballGfx = this.add.image(LAUNCHER.x, LAUNCHER.y, "ball").setDepth(7);
     this.settleCounter = 0;
+    this.shotElapsedMs = 0;
     this.ballTrail.start();
 
     this.ballsLeft -= 1;
@@ -438,23 +441,25 @@ export class ArenaScene extends Phaser.Scene {
     }
   }
 
-  update(): void {
+  update(_time: number, deltaMs: number): void {
     if (this.gameEnded) return;
 
     if (this.ball) {
       this.ballGfx.setPosition(this.ball.position.x, this.ball.position.y);
       this.ballTrail.setPosition(this.ball.position.x, this.ball.position.y);
 
+      this.shotElapsedMs += deltaMs;
       const speed = Math.hypot(this.ball.velocity.x, this.ball.velocity.y);
-      const drained = this.ball.position.y > HEIGHT + 40;
-      if (drained) {
-        this.removeBall();
-      } else if (speed < SETTLE_SPEED) {
+      if (speed < SETTLE_SPEED) {
         this.settleCounter += 1;
         if (this.settleCounter > SETTLE_FRAMES) this.removeBall();
       } else {
         this.settleCounter = 0;
       }
+      // Safety net: restitution + gravity can leave a ball doing endless
+      // tiny micro-bounces against the floor that never quite read as
+      // "stopped" — never let the player get stuck waiting on that.
+      if (this.shotElapsedMs > MAX_SHOT_MS) this.removeBall();
     }
 
     const pegsLeft = this.pegs.filter((pg) => pg.hp > 0).length;
