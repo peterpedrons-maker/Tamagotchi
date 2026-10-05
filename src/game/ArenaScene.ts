@@ -1,12 +1,13 @@
 import Phaser from "phaser";
 
 /**
- * Pinball-roguelike core loop: launcher at the BOTTOM, you drag-aim and
- * fire the ball upward into the peg field, gravity pulls it back down.
- * There's no drain — the floor is solid, so the ball just loses energy
- * (air + ground friction) on every bounce and naturally comes to rest.
- * Once it's fully stopped, that shot is over and you launch again. Score
- * comes from hits; the run ends when you're out of shots.
+ * Pinball-roguelike core loop: no gravity, no friction — the launcher
+ * fires the ball in a straight line at a constant speed and it bounces
+ * elastically off walls/pegs forever (Arkanoid-style), never slowing
+ * down and never settling on its own. Since it can't come to rest, a
+ * shot just runs for a fixed amount of chaos time (MAX_SHOT_MS) and then
+ * auto-recalls, handing control back for the next launch. Score comes
+ * from hits; the run ends when you're out of shots.
  *
  * Still no external art — this pass is about making the procedural look
  * (glowing orbs, particles, a cabinet-style frame) read as a real game
@@ -20,11 +21,8 @@ const BALL_RADIUS = 10;
 const START_BALLS = 5;
 const MIN_DRAG = 20;
 const MAX_DRAG = 160;
-const MIN_SPEED = 8;
-const MAX_SPEED = 24;
-const SETTLE_SPEED = 0.35;
-const SETTLE_FRAMES = 30;
-const MAX_SHOT_MS = 16000;
+const SHOT_SPEED = 14;
+const MAX_SHOT_MS = 7000;
 const HIT_SCORE = 10;
 const DESTROY_BONUS = 40;
 const CLEAR_BONUS = 300;
@@ -58,7 +56,6 @@ export class ArenaScene extends Phaser.Scene {
   private aimReticle!: Phaser.GameObjects.Arc;
 
   private aiming = false;
-  private settleCounter = 0;
   private shotElapsedMs = 0;
 
   private ballsLeft = START_BALLS;
@@ -79,7 +76,6 @@ export class ArenaScene extends Phaser.Scene {
     this.pegs = [];
     this.ball = null;
     this.aiming = false;
-    this.settleCounter = 0;
     this.shotElapsedMs = 0;
     this.ballsLeft = START_BALLS;
     this.score = 0;
@@ -342,20 +338,13 @@ export class ArenaScene extends Phaser.Scene {
     const tx = LAUNCHER.x + Math.cos(angle) * dist;
     const ty = LAUNCHER.y + Math.sin(angle) * dist;
 
-    const powerRatio = Phaser.Math.Clamp((dist - MIN_DRAG) / (MAX_DRAG - MIN_DRAG), 0, 1);
-    const lineColor = Phaser.Display.Color.Interpolate.ColorWithColor(
-      Phaser.Display.Color.ValueToColor(0x6ee7ff),
-      Phaser.Display.Color.ValueToColor(0xff4d6a),
-      100,
-      Math.round(powerRatio * 100)
-    );
-    const color = Phaser.Display.Color.GetColor(lineColor.r, lineColor.g, lineColor.b);
-
+    // Drag only sets direction now — the shot always leaves at SHOT_SPEED
+    // and never slows down, so there's no "power" to show on the line.
     const steps = 10;
     for (let i = 0; i < steps; i++) {
       const t0 = i / steps;
       const t1 = (i + 0.6) / steps;
-      this.aimLine.lineStyle(4, color, 0.25 + 0.55 * t0);
+      this.aimLine.lineStyle(4, ACCENT, 0.25 + 0.55 * t0);
       this.aimLine.lineBetween(
         Phaser.Math.Linear(LAUNCHER.x, tx, t0),
         Phaser.Math.Linear(LAUNCHER.y, ty, t0),
@@ -363,7 +352,7 @@ export class ArenaScene extends Phaser.Scene {
         Phaser.Math.Linear(LAUNCHER.y, ty, t1)
       );
     }
-    this.aimReticle.setPosition(tx, ty).setFillStyle(color, 0.95);
+    this.aimReticle.setPosition(tx, ty).setFillStyle(ACCENT, 0.95);
   }
 
   private releaseAim(p: Phaser.Input.Pointer): void {
@@ -378,22 +367,20 @@ export class ArenaScene extends Phaser.Scene {
     if (dist < MIN_DRAG) return;
 
     const angle = Math.atan2(dy, dx);
-    const power = Phaser.Math.Linear(MIN_SPEED, MAX_SPEED, Phaser.Math.Clamp((dist - MIN_DRAG) / (MAX_DRAG - MIN_DRAG), 0, 1));
-
-    this.fireBall(angle, power);
+    this.fireBall(angle);
   }
 
-  private fireBall(angle: number, power: number): void {
+  private fireBall(angle: number): void {
     const body = this.matter.add.circle(LAUNCHER.x, LAUNCHER.y, BALL_RADIUS, {
-      restitution: 0.82,
-      friction: 0.015,
-      frictionAir: 0.0012,
+      restitution: 1,
+      friction: 0,
+      frictionAir: 0,
+      frictionStatic: 0,
       label: "ball",
     });
-    this.matter.body.setVelocity(body, { x: Math.cos(angle) * power, y: Math.sin(angle) * power });
+    this.matter.body.setVelocity(body, { x: Math.cos(angle) * SHOT_SPEED, y: Math.sin(angle) * SHOT_SPEED });
     this.ball = body;
     this.ballGfx = this.add.image(LAUNCHER.x, LAUNCHER.y, "ball").setDepth(7);
-    this.settleCounter = 0;
     this.shotElapsedMs = 0;
     this.ballTrail.start();
 
@@ -448,17 +435,9 @@ export class ArenaScene extends Phaser.Scene {
       this.ballGfx.setPosition(this.ball.position.x, this.ball.position.y);
       this.ballTrail.setPosition(this.ball.position.x, this.ball.position.y);
 
+      // No gravity/friction means the ball never slows down or settles on
+      // its own, so a shot just runs for a fixed amount of time.
       this.shotElapsedMs += deltaMs;
-      const speed = Math.hypot(this.ball.velocity.x, this.ball.velocity.y);
-      if (speed < SETTLE_SPEED) {
-        this.settleCounter += 1;
-        if (this.settleCounter > SETTLE_FRAMES) this.removeBall();
-      } else {
-        this.settleCounter = 0;
-      }
-      // Safety net: restitution + gravity can leave a ball doing endless
-      // tiny micro-bounces against the floor that never quite read as
-      // "stopped" — never let the player get stuck waiting on that.
       if (this.shotElapsedMs > MAX_SHOT_MS) this.removeBall();
     }
 
