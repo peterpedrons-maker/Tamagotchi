@@ -24,7 +24,7 @@ const MIN_SPEED = 8;
 const MAX_SPEED = 24;
 const SETTLE_SPEED = 0.35;
 const SETTLE_FRAMES = 30;
-const MAX_SHOT_MS = 9000;
+const MAX_SHOT_MS = 16000;
 const HIT_SCORE = 10;
 const DESTROY_BONUS = 40;
 const CLEAR_BONUS = 300;
@@ -385,9 +385,9 @@ export class ArenaScene extends Phaser.Scene {
 
   private fireBall(angle: number, power: number): void {
     const body = this.matter.add.circle(LAUNCHER.x, LAUNCHER.y, BALL_RADIUS, {
-      restitution: 0.55,
-      friction: 0.08,
-      frictionAir: 0.006,
+      restitution: 0.82,
+      friction: 0.015,
+      frictionAir: 0.0012,
       label: "ball",
     });
     this.matter.body.setVelocity(body, { x: Math.cos(angle) * power, y: Math.sin(angle) * power });
