@@ -2,6 +2,15 @@ import Phaser from "phaser";
 import "./style.css";
 import { ArenaScene } from "./game/ArenaScene";
 
+// Forces an immediate update check against any old service worker still
+// controlling this origin from a previous version of the game (see sw.js
+// for why). This project itself registers nothing persistent.
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.getRegistrations().then((regs) => {
+    for (const reg of regs) reg.update();
+  });
+}
+
 new Phaser.Game({
   type: Phaser.AUTO,
   parent: "game-root",
