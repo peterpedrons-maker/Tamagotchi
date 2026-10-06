@@ -2,12 +2,12 @@ import Phaser from "phaser";
 import { Sfx } from "./sfx";
 
 /**
- * Pinball-roguelike core loop: no gravity — the launcher fires the ball
- * in a straight line and it bounces off walls/pegs. It loses only a
- * whisper of energy per bounce (near-elastic), so a shot stays lively
- * for a long time instead of dying out fast; MAX_SHOT_MS is still a
- * backstop in case it never quite reads as "stopped". Score comes from
- * hits; the run ends when you're out of shots.
+ * Pinball-roguelike core loop: no gravity, no friction at all — the
+ * launcher is a slingshot (pull back to charge power, release to fire)
+ * and the ball keeps that exact speed the whole shot, bouncing
+ * perfectly elastically. No gradual decay-to-a-crawl: a shot either
+ * stays fast the entire time, or it's over (MAX_SHOT_MS cuts it off
+ * cleanly). Score comes from hits; the run ends when you're out of shots.
  *
  * Still no external art — this pass ("revamp") layers juice on top of
  * the procedural look: combo-scaled particles/shake/haptics, a rising-
@@ -21,8 +21,9 @@ const BALL_RADIUS = 10;
 const START_BALLS = 5;
 const MIN_DRAG = 20;
 const MAX_DRAG = 160;
-const SHOT_SPEED = 14;
-const MAX_SHOT_MS = 14000;
+const MIN_SPEED = 26;
+const MAX_SPEED = 70;
+const MAX_SHOT_MS = 9000;
 const HIT_SCORE = 10;
 const DESTROY_BONUS = 40;
 const CLEAR_BONUS = 300;
@@ -359,13 +360,22 @@ export class ArenaScene extends Phaser.Scene {
     const tx = LAUNCHER.x + Math.cos(angle) * dist;
     const ty = LAUNCHER.y + Math.sin(angle) * dist;
 
-    // Drag only sets direction now — the shot always leaves at SHOT_SPEED
-    // and never slows down, so there's no "power" to show on the line.
+    // Pull back like a slingshot: drag distance charges the power, shown
+    // as the aim line shifting from cool (weak) to hot (max impulse).
+    const powerRatio = Phaser.Math.Clamp((dist - MIN_DRAG) / (MAX_DRAG - MIN_DRAG), 0, 1);
+    const lineColor = Phaser.Display.Color.Interpolate.ColorWithColor(
+      Phaser.Display.Color.ValueToColor(0x6ee7ff),
+      Phaser.Display.Color.ValueToColor(0xff4d6a),
+      100,
+      Math.round(powerRatio * 100)
+    );
+    const color = Phaser.Display.Color.GetColor(lineColor.r, lineColor.g, lineColor.b);
+
     const steps = 10;
     for (let i = 0; i < steps; i++) {
       const t0 = i / steps;
       const t1 = (i + 0.6) / steps;
-      this.aimLine.lineStyle(4, ACCENT, 0.25 + 0.55 * t0);
+      this.aimLine.lineStyle(4 + powerRatio * 2, color, 0.25 + 0.55 * t0);
       this.aimLine.lineBetween(
         Phaser.Math.Linear(LAUNCHER.x, tx, t0),
         Phaser.Math.Linear(LAUNCHER.y, ty, t0),
@@ -373,14 +383,14 @@ export class ArenaScene extends Phaser.Scene {
         Phaser.Math.Linear(LAUNCHER.y, ty, t1)
       );
     }
-    this.aimReticle.setPosition(tx, ty).setFillStyle(ACCENT, 0.95);
+    this.aimReticle.setPosition(tx, ty).setFillStyle(color, 0.95).setScale(1 + powerRatio * 0.6);
   }
 
   private releaseAim(p: Phaser.Input.Pointer): void {
     if (!this.aiming) return;
     this.aiming = false;
     this.aimLine.clear();
-    this.aimReticle.setVisible(false);
+    this.aimReticle.setVisible(false).setScale(1);
 
     const dx = p.x - LAUNCHER.x;
     const dy = p.y - LAUNCHER.y;
@@ -388,21 +398,23 @@ export class ArenaScene extends Phaser.Scene {
     if (dist < MIN_DRAG) return;
 
     const angle = Math.atan2(dy, dx);
-    this.fireBall(angle);
+    const powerRatio = Phaser.Math.Clamp((dist - MIN_DRAG) / (MAX_DRAG - MIN_DRAG), 0, 1);
+    const speed = Phaser.Math.Linear(MIN_SPEED, MAX_SPEED, powerRatio);
+    this.fireBall(angle, speed);
   }
 
-  private fireBall(angle: number): void {
+  private fireBall(angle: number, speed: number): void {
     const body = this.matter.add.circle(LAUNCHER.x, LAUNCHER.y, BALL_RADIUS, {
-      // No gravity, and only a whisper of friction: the ball should coast
-      // for a long time, losing speed very gradually instead of being
-      // yanked to a stop.
-      restitution: 0.985,
-      friction: 0.0008,
-      frictionAir: 0.00012,
+      // No gravity and no friction at all — the ball keeps the exact
+      // speed it launched with for the whole shot. No decay-to-a-crawl;
+      // it's either fast or the shot is over (MAX_SHOT_MS cuts it off).
+      restitution: 1,
+      friction: 0,
+      frictionAir: 0,
       frictionStatic: 0,
       label: "ball",
     });
-    this.matter.body.setVelocity(body, { x: Math.cos(angle) * SHOT_SPEED, y: Math.sin(angle) * SHOT_SPEED });
+    this.matter.body.setVelocity(body, { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed });
     this.ball = body;
     this.ballGfx = this.add.image(LAUNCHER.x, LAUNCHER.y, "ball").setDepth(7);
     this.shotElapsedMs = 0;
@@ -482,6 +494,7 @@ export class ArenaScene extends Phaser.Scene {
     if (this.gameEnded) return;
 
     if (this.ball) {
+      this.clampBallToArena();
       this.ballGfx.setPosition(this.ball.position.x, this.ball.position.y);
       this.ballTrail.setPosition(this.ball.position.x, this.ball.position.y);
 
@@ -500,6 +513,50 @@ export class ArenaScene extends Phaser.Scene {
       } else if (this.ballsLeft <= 0) {
         this.endGame(`Fim de jogo\nPontuação final: ${this.score}`, false);
       }
+    }
+  }
+
+  /**
+   * Safety net against tunneling: at the high speeds a fully-charged shot
+   * can reach, Matter can let the ball cross the ~32px wall boundary
+   * within a single physics step and escape the arena entirely (it would
+   * then fly off-screen forever, invisible, until the shot timeout). This
+   * clamps the ball back inside and reflects the offending velocity
+   * component, regardless of what Matter's own wall collision did.
+   */
+  private clampBallToArena(): void {
+    if (!this.ball) return;
+    const r = BALL_RADIUS;
+    const pos = this.ball.position;
+    const vel = this.ball.velocity;
+    let x = pos.x;
+    let y = pos.y;
+    let vx = vel.x;
+    let vy = vel.y;
+    let hit = false;
+
+    if (x < r) {
+      x = r;
+      vx = Math.abs(vx);
+      hit = true;
+    } else if (x > WIDTH - r) {
+      x = WIDTH - r;
+      vx = -Math.abs(vx);
+      hit = true;
+    }
+    if (y < r) {
+      y = r;
+      vy = Math.abs(vy);
+      hit = true;
+    } else if (y > HEIGHT - r) {
+      y = HEIGHT - r;
+      vy = -Math.abs(vy);
+      hit = true;
+    }
+
+    if (hit) {
+      this.matter.body.setPosition(this.ball, { x, y });
+      this.matter.body.setVelocity(this.ball, { x: vx, y: vy });
     }
   }
 
