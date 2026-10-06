@@ -29,7 +29,7 @@ const MIN_SPEED = 26;
 const MAX_SPEED = 70;
 const MAX_SHOT_MS = 9000;
 const HIT_SCORE = 10;
-const DESTROY_BONUS = 40;
+const DESTROY_BONUS_PER_HP = 8;
 const CLEAR_BONUS = 300;
 
 const PEG_TIERS = [
@@ -39,13 +39,13 @@ const PEG_TIERS = [
 ] as const;
 const BALL_CORE = 0x6ee7ff;
 const BALL_GLOW = 0x38bdf8;
-const LAUNCHER_CORE = 0xffd76a;
 const LAUNCHER_GLOW = 0xffecb3;
 const ACCENT = 0x6ee7ff;
 
 interface Peg {
   body: MatterJS.BodyType;
   gfx: Phaser.GameObjects.Image;
+  hpBar: Phaser.GameObjects.Graphics;
   hp: number;
   maxHp: number;
   radius: number;
@@ -59,6 +59,8 @@ export class ArenaScene extends Phaser.Scene {
   private hitSparks!: Phaser.GameObjects.Particles.ParticleEmitter;
   private aimLine!: Phaser.GameObjects.Graphics;
   private aimReticle!: Phaser.GameObjects.Arc;
+  private launcherSprite!: Phaser.GameObjects.Image;
+  private muzzleFlash!: Phaser.GameObjects.Image;
 
   private aiming = false;
   private shotElapsedMs = 0;
@@ -162,7 +164,7 @@ export class ArenaScene extends Phaser.Scene {
   private bakeTextures(): void {
     for (const tier of PEG_TIERS) this.bakeOrbTexture(tier.key, 20, tier.core, tier.glow, true);
     this.bakeOrbTexture("ball", BALL_RADIUS, BALL_CORE, BALL_GLOW);
-    this.bakeOrbTexture("launcher", 14, LAUNCHER_CORE, LAUNCHER_GLOW);
+    this.bakeCannonTexture();
 
     if (!this.textures.exists("spark")) {
       const g = this.make.graphics({ x: 0, y: 0 }, false);
@@ -171,6 +173,67 @@ export class ArenaScene extends Phaser.Scene {
       g.generateTexture("spark", 8, 8);
       g.destroy();
     }
+
+    if (!this.textures.exists("muzzle-flash")) {
+      const g = this.make.graphics({ x: 0, y: 0 }, false);
+      const c = 24;
+      g.fillStyle(0xfff3c2, 0.95);
+      g.fillCircle(c, c, 9);
+      g.fillStyle(LAUNCHER_GLOW, 0.6);
+      g.fillCircle(c, c, 18);
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        g.fillStyle(0xffe6a3, 0.7);
+        g.fillTriangle(c, c, c + Math.cos(a - 0.18) * 22, c + Math.sin(a - 0.18) * 22, c + Math.cos(a + 0.18) * 22, c + Math.sin(a + 0.18) * 22);
+      }
+      g.generateTexture("muzzle-flash", c * 2, c * 2);
+      g.destroy();
+    }
+  }
+
+  /** A stubby stone-and-iron cannon, default-drawn pointing straight up so rotation math stays simple (rotation = angle + PI/2). */
+  private bakeCannonTexture(): void {
+    const key = "cannon";
+    if (this.textures.exists(key)) return;
+    const w = 56;
+    const h = 72;
+    const g = this.make.graphics({ x: 0, y: 0 }, false);
+    const cx = w / 2;
+
+    // round stone base
+    g.fillStyle(0x4b4a46, 1);
+    g.fillRoundedRect(cx - 22, h - 26, 44, 24, 6);
+    g.fillStyle(0x3a3936, 1);
+    g.fillRoundedRect(cx - 22, h - 26, 44, 8, 6);
+    g.lineStyle(2, 0x242321, 0.7);
+    g.strokeRoundedRect(cx - 22, h - 26, 44, 24, 6);
+
+    // iron support ring
+    g.fillStyle(0x2e2d2b, 1);
+    g.fillCircle(cx, h - 26, 15);
+    g.fillStyle(0x56544f, 1);
+    g.fillCircle(cx, h - 26, 11);
+
+    // barrel, pointing up
+    g.fillStyle(0x3a3936, 1);
+    g.fillRoundedRect(cx - 13, 2, 26, h - 20, 8);
+    g.fillStyle(0x56544f, 1);
+    g.fillRoundedRect(cx - 9, 4, 18, h - 24, 7);
+    // muzzle rim
+    g.fillStyle(0x1e1d1b, 1);
+    g.fillEllipse(cx, 8, 13, 6);
+    g.fillStyle(0x0c0b0a, 1);
+    g.fillEllipse(cx, 8, 8, 4);
+    // two iron bands
+    g.fillStyle(0x2e2d2b, 1);
+    g.fillRoundedRect(cx - 14, 26, 28, 6, 2);
+    g.fillRoundedRect(cx - 14, 46, 28, 6, 2);
+    // highlight
+    g.fillStyle(0xffffff, 0.12);
+    g.fillRoundedRect(cx - 9, 6, 5, h - 28, 3);
+
+    g.generateTexture(key, w, h);
+    g.destroy();
   }
 
   /** A mossy stone cave: blocky stonework, cracks, moss patches, rubble — instead of a flat gradient. */
@@ -447,42 +510,82 @@ export class ArenaScene extends Phaser.Scene {
   // ---------- gameplay (unchanged logic) ----------
 
   private buildLauncher(): void {
-    this.add.image(LAUNCHER.x, LAUNCHER.y, "launcher").setDepth(2);
-    const ring = this.add.circle(LAUNCHER.x, LAUNCHER.y, 22, 0xffffff, 0).setStrokeStyle(2, LAUNCHER_GLOW, 0.5).setDepth(2);
+    const ring = this.add.circle(LAUNCHER.x, LAUNCHER.y, 26, 0xffffff, 0).setStrokeStyle(2, LAUNCHER_GLOW, 0.5).setDepth(1);
     this.tweens.add({ targets: ring, scale: 1.3, alpha: 0, duration: 1100, repeat: -1, ease: "Sine.Out" });
+
+    this.launcherSprite = this.add.image(LAUNCHER.x, LAUNCHER.y, "cannon").setOrigin(0.5, 0.72).setDepth(2);
+    this.muzzleFlash = this.add.image(LAUNCHER.x, LAUNCHER.y, "muzzle-flash").setDepth(3).setVisible(false).setBlendMode("ADD");
+  }
+
+  /** Points the muzzle flash + plays its pop at the barrel tip, in the direction the cannon is currently aimed. */
+  private flashMuzzle(angle: number): void {
+    const tipDist = 34;
+    const x = LAUNCHER.x + Math.cos(angle) * tipDist;
+    const y = LAUNCHER.y + Math.sin(angle) * tipDist;
+    this.muzzleFlash.setPosition(x, y).setRotation(angle + Math.PI / 2).setScale(0.6).setAlpha(1).setVisible(true);
+    this.tweens.add({
+      targets: this.muzzleFlash,
+      scale: 1.3,
+      alpha: 0,
+      duration: 140,
+      ease: "Cubic.Out",
+      onComplete: () => this.muzzleFlash.setVisible(false),
+    });
   }
 
   private buildPegs(): void {
-    // Spread across the taller arena (and a notch smaller than before) so
-    // there's visibly more open space for the ball to travel through,
-    // rather than a dense cluster filling most of the screen.
-    const layout: Array<{ x: number; y: number; hp: number }> = [
-      { x: 120, y: 220, hp: 1 },
-      { x: 240, y: 163, hp: 1 },
-      { x: 360, y: 220, hp: 1 },
-      { x: 90, y: 362, hp: 1 },
-      { x: 390, y: 362, hp: 1 },
-      { x: 180, y: 391, hp: 2 },
-      { x: 300, y: 391, hp: 2 },
-      { x: 240, y: 502, hp: 3 },
-      { x: 150, y: 560, hp: 1 },
-      { x: 330, y: 560, hp: 1 },
-      { x: 240, y: 671, hp: 2 },
-      { x: 110, y: 700, hp: 1 },
-      { x: 370, y: 700, hp: 1 },
+    // Real HP now, not 1-3 hit pegs: enemies take a genuine chunk of a
+    // shot's combo to bring down, with a visible health bar instead of
+    // the hit count being the only feedback. Three weight classes —
+    // small/medium/boss — spread across the taller arena with plenty of
+    // open lanes between them.
+    const layout: Array<{ x: number; y: number; hp: number; radius: number }> = [
+      { x: 120, y: 220, hp: 5, radius: 17 },
+      { x: 240, y: 163, hp: 5, radius: 17 },
+      { x: 360, y: 220, hp: 5, radius: 17 },
+      { x: 90, y: 362, hp: 5, radius: 17 },
+      { x: 390, y: 362, hp: 5, radius: 17 },
+      { x: 180, y: 391, hp: 8, radius: 21 },
+      { x: 300, y: 391, hp: 8, radius: 21 },
+      { x: 240, y: 502, hp: 16, radius: 29 },
+      { x: 150, y: 560, hp: 5, radius: 17 },
+      { x: 330, y: 560, hp: 5, radius: 17 },
+      { x: 240, y: 671, hp: 8, radius: 21 },
+      { x: 110, y: 700, hp: 5, radius: 17 },
+      { x: 370, y: 700, hp: 5, radius: 17 },
     ];
 
     for (const spot of layout) {
-      const radius = 13 + spot.hp * 1.6;
-      const body = this.matter.add.circle(spot.x, spot.y, radius, {
+      const { x, y, hp, radius } = spot;
+      const body = this.matter.add.circle(x, y, radius, {
         isStatic: true,
         restitution: 1,
         label: "peg",
       });
-      const gfx = this.add.image(spot.x, spot.y, this.tierForHp(spot.hp, spot.hp).key).setDepth(4);
+      const gfx = this.add.image(x, y, this.tierForHp(hp, hp).key).setDepth(4);
       gfx.setScale(radius / 20);
-      this.pegs.push({ body, gfx, hp: spot.hp, maxHp: spot.hp, radius });
+      const hpBar = this.add.graphics().setDepth(4);
+      const peg: Peg = { body, gfx, hpBar, hp, maxHp: hp, radius };
+      this.drawHpBar(peg);
+      this.pegs.push(peg);
     }
+  }
+
+  /** A small background-plus-fill health bar hovering just above the enemy, colored to match its current tier. */
+  private drawHpBar(peg: Peg): void {
+    const w = Math.max(28, peg.radius * 1.8);
+    const h = 5;
+    const x = peg.body.position.x - w / 2;
+    const y = peg.body.position.y - peg.radius - 14;
+    peg.hpBar.clear();
+    if (peg.hp <= 0) return;
+    peg.hpBar.fillStyle(0x0b0f22, 0.7);
+    peg.hpBar.fillRoundedRect(x, y, w, h, 2);
+    const ratio = Phaser.Math.Clamp(peg.hp / peg.maxHp, 0, 1);
+    peg.hpBar.fillStyle(this.tierForHp(peg.hp, peg.maxHp).core, 1);
+    peg.hpBar.fillRoundedRect(x, y, w * ratio, h, 2);
+    peg.hpBar.lineStyle(1, 0x000000, 0.4);
+    peg.hpBar.strokeRoundedRect(x, y, w, h, 2);
   }
 
   private tierForHp(hp: number, maxHp: number): (typeof PEG_TIERS)[number] {
@@ -509,6 +612,10 @@ export class ArenaScene extends Phaser.Scene {
     const angle = Math.atan2(dy, dx);
     const tx = LAUNCHER.x + Math.cos(angle) * dist;
     const ty = LAUNCHER.y + Math.sin(angle) * dist;
+
+    // The cannon's texture is drawn barrel-up (angle 0 in screen terms is
+    // "pointing right"), so add a quarter turn to track the aim direction.
+    this.launcherSprite.setRotation(angle + Math.PI / 2);
 
     // Pull back like a slingshot: drag distance charges the power, shown
     // as the aim line shifting from cool (weak) to hot (max impulse).
@@ -545,7 +652,10 @@ export class ArenaScene extends Phaser.Scene {
     const dx = p.x - LAUNCHER.x;
     const dy = p.y - LAUNCHER.y;
     const dist = Math.hypot(dx, dy);
-    if (dist < MIN_DRAG) return;
+    if (dist < MIN_DRAG) {
+      this.tweens.add({ targets: this.launcherSprite, rotation: 0, duration: 150, ease: "Sine.Out" });
+      return;
+    }
 
     const angle = Math.atan2(dy, dx);
     const powerRatio = Phaser.Math.Clamp((dist - MIN_DRAG) / (MAX_DRAG - MIN_DRAG), 0, 1);
@@ -570,6 +680,8 @@ export class ArenaScene extends Phaser.Scene {
     this.shotElapsedMs = 0;
     this.ballTrail.start();
     this.sfx.launch();
+    this.flashMuzzle(angle);
+    this.tweens.add({ targets: this.launcherSprite, rotation: 0, duration: 220, delay: 60, ease: "Sine.Out" });
 
     this.ballsLeft -= 1;
     this.shotHits = 0;
@@ -598,12 +710,14 @@ export class ArenaScene extends Phaser.Scene {
     this.spawnScorePopup(peg.body.position.x, peg.body.position.y - peg.radius, HIT_SCORE);
 
     if (peg.hp <= 0) {
-      this.score += DESTROY_BONUS;
+      const destroyBonus = peg.maxHp * DESTROY_BONUS_PER_HP;
+      this.score += destroyBonus;
       this.sfx.destroy(this.shotHits);
-      this.spawnScorePopup(peg.body.position.x, peg.body.position.y - peg.radius - 16, DESTROY_BONUS, true);
+      this.spawnScorePopup(peg.body.position.x, peg.body.position.y - peg.radius - 16, destroyBonus, true);
       this.hitSparks.explode(Math.round(22 * comboScale), peg.body.position.x, peg.body.position.y);
       this.vibrate([12, 20, 12]);
       this.matter.world.remove(peg.body);
+      peg.hpBar.destroy();
       this.tweens.add({
         targets: peg.gfx,
         alpha: 0,
@@ -613,6 +727,7 @@ export class ArenaScene extends Phaser.Scene {
       });
     } else {
       peg.gfx.setTexture(this.tierForHp(peg.hp, peg.maxHp).key);
+      this.drawHpBar(peg);
       this.tweens.add({ targets: peg.gfx, scale: peg.gfx.scale * 1.25, duration: 70, yoyo: true });
     }
 
