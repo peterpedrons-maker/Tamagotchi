@@ -15,7 +15,7 @@ new Phaser.Game({
   type: Phaser.AUTO,
   parent: "game-root",
   width: 480,
-  height: 960,
+  height: 1120,
   backgroundColor: "#0a1120",
   scale: {
     mode: Phaser.Scale.FIT,

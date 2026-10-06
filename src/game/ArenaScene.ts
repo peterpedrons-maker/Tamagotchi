@@ -15,7 +15,7 @@ import { Sfx } from "./sfx";
  */
 
 const WIDTH = 480;
-const HEIGHT = 960;
+const HEIGHT = 1120;
 const LAUNCHER = { x: WIDTH / 2, y: HEIGHT - 60 };
 const BALL_RADIUS = 10;
 // How far in from the canvas edge the ball is actually stopped — must match
@@ -238,10 +238,10 @@ export class ArenaScene extends Phaser.Scene {
 
   /** Cave dressing: flickering wall torches, a treasure chest, scattered bones — no two runs look quite as sterile. */
   private buildProps(): void {
-    this.buildTorch(36, 180);
-    this.buildTorch(WIDTH - 36, 180);
-    this.buildTorch(36, 520);
-    this.buildTorch(WIDTH - 36, 520);
+    this.buildTorch(36, 210);
+    this.buildTorch(WIDTH - 36, 210);
+    this.buildTorch(36, 607);
+    this.buildTorch(WIDTH - 36, 607);
     this.buildChest(70, HEIGHT - 150);
     this.buildBones(WIDTH - 90, HEIGHT - 140);
     this.buildBones(60, HEIGHT - 240, true);
@@ -457,19 +457,19 @@ export class ArenaScene extends Phaser.Scene {
     // there's visibly more open space for the ball to travel through,
     // rather than a dense cluster filling most of the screen.
     const layout: Array<{ x: number; y: number; hp: number }> = [
-      { x: 120, y: 190, hp: 1 },
-      { x: 240, y: 140, hp: 1 },
-      { x: 360, y: 190, hp: 1 },
-      { x: 90, y: 310, hp: 1 },
-      { x: 390, y: 310, hp: 1 },
-      { x: 180, y: 335, hp: 2 },
-      { x: 300, y: 335, hp: 2 },
-      { x: 240, y: 430, hp: 3 },
-      { x: 150, y: 480, hp: 1 },
-      { x: 330, y: 480, hp: 1 },
-      { x: 240, y: 575, hp: 2 },
-      { x: 110, y: 600, hp: 1 },
-      { x: 370, y: 600, hp: 1 },
+      { x: 120, y: 220, hp: 1 },
+      { x: 240, y: 163, hp: 1 },
+      { x: 360, y: 220, hp: 1 },
+      { x: 90, y: 362, hp: 1 },
+      { x: 390, y: 362, hp: 1 },
+      { x: 180, y: 391, hp: 2 },
+      { x: 300, y: 391, hp: 2 },
+      { x: 240, y: 502, hp: 3 },
+      { x: 150, y: 560, hp: 1 },
+      { x: 330, y: 560, hp: 1 },
+      { x: 240, y: 671, hp: 2 },
+      { x: 110, y: 700, hp: 1 },
+      { x: 370, y: 700, hp: 1 },
     ];
 
     for (const spot of layout) {
