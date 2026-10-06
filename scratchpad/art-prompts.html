@@ -1,0 +1,357 @@
+<title>Prompts da Masmorra</title>
+<style>
+  /* layout: single scroll column of prompt cards, grouped by asset type, each with its own copy button + one "copy all" action up top */
+  :root {
+    --bg: #11140f;
+    --panel: #181c14;
+    --panel-2: #1f251a;
+    --edge: #313a26;
+    --ink: #ece7d6;
+    --ink-dim: #a7a994;
+    --moss: #7fae5c;
+    --moss-bright: #a8e074;
+    --ember: #e0a14f;
+    --font-display: "Cinzel", Georgia, "Times New Roman", serif;
+    --font-body: "Inter", system-ui, -apple-system, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f3f1e7;
+      --panel: #ffffff;
+      --panel-2: #ece7d6;
+      --edge: #d8d2bb;
+      --ink: #221f15;
+      --ink-dim: #6b6652;
+      --moss: #4c7a33;
+      --moss-bright: #3c6327;
+      --ember: #a86a1c;
+      color-scheme: light;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f3f1e7;
+    --panel: #ffffff;
+    --panel-2: #ece7d6;
+    --edge: #d8d2bb;
+    --ink: #221f15;
+    --ink-dim: #6b6652;
+    --moss: #4c7a33;
+    --moss-bright: #3c6327;
+    --ember: #a86a1c;
+    color-scheme: light;
+  }
+  :root[data-theme="dark"] { color-scheme: dark; }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    margin: 0;
+    padding: 28px 16px 56px;
+    line-height: 1.5;
+  }
+
+  .wrap { max-width: 720px; margin: 0 auto; }
+
+  header { margin-bottom: 22px; }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--moss-bright);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .eyebrow::before { content: "⚔"; font-size: 12px; }
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(28px, 6vw, 38px);
+    margin: 6px 0 8px;
+    text-wrap: balance;
+  }
+  .sub { color: var(--ink-dim); font-size: 14.5px; max-width: 56ch; }
+
+  .allbar {
+    margin-top: 18px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  button {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 13.5px;
+    border-radius: 8px;
+    border: 1px solid var(--edge);
+    padding: 10px 16px;
+    cursor: pointer;
+    background: var(--panel-2);
+    color: var(--ink);
+    transition: border-color 0.15s ease, transform 0.08s ease;
+  }
+  button:hover { border-color: var(--moss); }
+  button:active { transform: scale(0.97); }
+
+  .btn-primary {
+    background: var(--moss);
+    color: #0e1309;
+    border-color: var(--moss);
+  }
+  .btn-primary:hover { background: var(--moss-bright); border-color: var(--moss-bright); }
+
+  .copystate {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--moss-bright);
+    min-height: 16px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .copystate.show { opacity: 1; }
+
+  .group {
+    margin-top: 34px;
+  }
+  .group-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ember);
+    border-bottom: 1px solid var(--edge);
+    padding-bottom: 8px;
+    margin-bottom: 14px;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--edge);
+    border-radius: 10px;
+    padding: 16px 16px 14px;
+    margin-bottom: 12px;
+  }
+  .card-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .card-name {
+    font-family: var(--font-display);
+    font-size: 16.5px;
+    font-weight: 600;
+  }
+  .card-copy {
+    flex-shrink: 0;
+    font-size: 12px;
+    padding: 6px 11px;
+    border-radius: 6px;
+  }
+  .card-text {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--ink-dim);
+    white-space: pre-wrap;
+    line-height: 1.55;
+  }
+
+  footer {
+    margin-top: 40px;
+    padding-top: 16px;
+    border-top: 1px solid var(--edge);
+    font-size: 13px;
+    color: var(--ink-dim);
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Dungeon Pinball · Assets</div>
+    <h1>Prompts da Masmorra</h1>
+    <p class="sub">Prompts prontos para gerar as artes do jogo (inimigos, canhão, bola, fundo). Copie um prompt por vez, ou todos juntos, e cole no gerador de imagem que você usa.</p>
+  </header>
+
+  <div class="allbar">
+    <button class="btn-primary" id="copyAllBtn">Copiar todos os prompts</button>
+    <span class="copystate" id="copyAllState"></span>
+  </div>
+
+  <div id="groups"></div>
+
+  <footer>
+    Me manda as imagens geradas aqui no chat (PNG, fundo transparente se der) dizendo qual é qual — eu integro no jogo.
+  </footer>
+</div>
+
+<script>
+(function () {
+  var STYLE_BASE = "2D game asset, flat vector / painted fantasy dungeon style, bold clean outlines, moody torch-lit cave color palette (mossy greens, warm amber highlights, deep shadows), centered, transparent background, no text, no watermark, single object.";
+
+  var DATA = [
+    {
+      title: "Inimigos — Pequeno (HP 5)",
+      items: [
+        {
+          name: "Cogumelo Rastejante",
+          text: "A small cute-but-creepy cave mushroom creature with tiny stubby legs and a glowing spore cap, idle pose facing forward, " + STYLE_BASE + " Circular silhouette so it reads well as a round token."
+        },
+        {
+          name: "Morcego de Caverna",
+          text: "A tiny cave bat with glowing eyes, wings folded, round huddled pose, " + STYLE_BASE
+        }
+      ]
+    },
+    {
+      title: "Inimigos — Médio (HP 8)",
+      items: [
+        {
+          name: "Sapo Venenoso",
+          text: "A chunky poisonous cave toad with warty green-purple skin and a wide grinning mouth, sitting pose, round silhouette, " + STYLE_BASE
+        },
+        {
+          name: "Rato Blindado",
+          text: "An armored cave rat wearing a crude bone/metal shoulder plate, round hunched pose, " + STYLE_BASE
+        }
+      ]
+    },
+    {
+      title: "Inimigos — Chefe (HP 16)",
+      items: [
+        {
+          name: "Guardião de Pedra",
+          text: "A large stone golem guardian with glowing crystal eyes and moss growing on its shoulders, imposing round-ish silhouette, " + STYLE_BASE
+        },
+        {
+          name: "Dragão-Verme",
+          text: "A coiled cave wyrm (worm-dragon) with small frilled fins and glowing veins, round coiled-up pose so it fits a circular token, " + STYLE_BASE
+        }
+      ]
+    },
+    {
+      title: "Lançador",
+      items: [
+        {
+          name: "Canhão de Pedra",
+          text: "A stubby stone-and-iron dungeon cannon mounted on a round swivel base, barrel pointing straight up, carved with simple rune engravings, " + STYLE_BASE + " Side view, barrel vertical, centered."
+        }
+      ]
+    },
+    {
+      title: "Bola",
+      items: [
+        {
+          name: "Orbe Mágico",
+          text: "A small glowing magic orb/marble, cyan-blue energy core with a soft outer glow, simple and clean, " + STYLE_BASE + " Perfect circle silhouette."
+        }
+      ]
+    },
+    {
+      title: "Fundo (opcional)",
+      items: [
+        {
+          name: "Textura de Pedra",
+          text: "A seamless tileable dungeon stone wall texture, mossy stone blocks, subtle cracks and mortar lines, dark cave palette, no characters, flat lighting, top-down game background tile."
+        }
+      ]
+    }
+  ];
+
+  function copyText(text, onDone) {
+    function fallback() {
+      try {
+        var ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        onDone(true);
+      } catch (e) {
+        onDone(false);
+      }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        onDone(true);
+      }, fallback);
+    } else {
+      fallback();
+    }
+  }
+
+  var groupsEl = document.getElementById("groups");
+  var allTextParts = [];
+
+  DATA.forEach(function (group) {
+    var groupEl = document.createElement("div");
+    groupEl.className = "group";
+
+    var titleEl = document.createElement("div");
+    titleEl.className = "group-title";
+    titleEl.textContent = group.title;
+    groupEl.appendChild(titleEl);
+
+    allTextParts.push("## " + group.title);
+
+    group.items.forEach(function (item) {
+      allTextParts.push(item.name + ":\n" + item.text);
+
+      var card = document.createElement("div");
+      card.className = "card";
+
+      var head = document.createElement("div");
+      head.className = "card-head";
+
+      var name = document.createElement("div");
+      name.className = "card-name";
+      name.textContent = item.name;
+      head.appendChild(name);
+
+      var btn = document.createElement("button");
+      btn.className = "card-copy";
+      btn.textContent = "Copiar";
+      head.appendChild(btn);
+
+      card.appendChild(head);
+
+      var textEl = document.createElement("div");
+      textEl.className = "card-text";
+      textEl.textContent = item.text;
+      card.appendChild(textEl);
+
+      btn.addEventListener("click", function () {
+        copyText(item.text, function (ok) {
+          btn.textContent = ok ? "Copiado!" : "Selecione o texto";
+          setTimeout(function () { btn.textContent = "Copiar"; }, 1400);
+        });
+      });
+
+      groupEl.appendChild(card);
+    });
+
+    groupsEl.appendChild(groupEl);
+  });
+
+  var allText = allTextParts.join("\n\n");
+  var copyAllBtn = document.getElementById("copyAllBtn");
+  var copyAllState = document.getElementById("copyAllState");
+
+  copyAllBtn.addEventListener("click", function () {
+    copyText(allText, function (ok) {
+      copyAllState.textContent = ok ? "Todos os prompts copiados." : "Não foi possível copiar automaticamente — copie cada prompt individualmente.";
+      copyAllState.classList.add("show");
+      setTimeout(function () { copyAllState.classList.remove("show"); }, 2600);
+    });
+  });
+})();
+</script>
