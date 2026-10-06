@@ -15,9 +15,13 @@ import { Sfx } from "./sfx";
  */
 
 const WIDTH = 480;
-const HEIGHT = 800;
+const HEIGHT = 960;
 const LAUNCHER = { x: WIDTH / 2, y: HEIGHT - 60 };
 const BALL_RADIUS = 10;
+// How far in from the canvas edge the ball is actually stopped — must match
+// where the frame is drawn (buildBackdrop), or the ball visibly pokes past
+// the border before the safety clamp catches it.
+const ARENA_MARGIN = 18;
 const START_BALLS = 5;
 const MIN_DRAG = 20;
 const MAX_DRAG = 160;
@@ -87,7 +91,7 @@ export class ArenaScene extends Phaser.Scene {
 
     this.bakeTextures();
 
-    this.matter.world.setBounds(0, 0, WIDTH, HEIGHT, 32);
+    this.matter.world.setBounds(0, 0, WIDTH, HEIGHT, ARENA_MARGIN);
 
     this.buildBackdrop();
     this.buildStars();
@@ -222,20 +226,22 @@ export class ArenaScene extends Phaser.Scene {
     bg.fillRect(0, 0, WIDTH, 90);
     bg.fillRect(0, HEIGHT - 140, WIDTH, 140);
 
-    // cabinet-style frame (mossy stone trim)
+    // cabinet-style frame (mossy stone trim) — drawn exactly at ARENA_MARGIN
+    // so the ball's hard stop lines up with what the player actually sees.
     const frame = this.add.graphics().setDepth(5);
+    const m = ARENA_MARGIN;
     frame.lineStyle(7, 0x1a2420, 1);
-    frame.strokeRoundedRect(6, 6, WIDTH - 12, HEIGHT - 12, 18);
+    frame.strokeRoundedRect(m - 4, m - 4, WIDTH - (m - 4) * 2, HEIGHT - (m - 4) * 2, 18);
     frame.lineStyle(2, 0x5a8a52, 0.55);
-    frame.strokeRoundedRect(10, 10, WIDTH - 20, HEIGHT - 20, 16);
+    frame.strokeRoundedRect(m, m, WIDTH - m * 2, HEIGHT - m * 2, 16);
   }
 
   /** Cave dressing: flickering wall torches, a treasure chest, scattered bones — no two runs look quite as sterile. */
   private buildProps(): void {
-    this.buildTorch(36, 150);
-    this.buildTorch(WIDTH - 36, 150);
-    this.buildTorch(36, 430);
-    this.buildTorch(WIDTH - 36, 430);
+    this.buildTorch(36, 180);
+    this.buildTorch(WIDTH - 36, 180);
+    this.buildTorch(36, 520);
+    this.buildTorch(WIDTH - 36, 520);
     this.buildChest(70, HEIGHT - 150);
     this.buildBones(WIDTH - 90, HEIGHT - 140);
     this.buildBones(60, HEIGHT - 240, true);
@@ -447,24 +453,27 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private buildPegs(): void {
+    // Spread across the taller arena (and a notch smaller than before) so
+    // there's visibly more open space for the ball to travel through,
+    // rather than a dense cluster filling most of the screen.
     const layout: Array<{ x: number; y: number; hp: number }> = [
-      { x: 120, y: 160, hp: 1 },
-      { x: 240, y: 120, hp: 1 },
-      { x: 360, y: 160, hp: 1 },
-      { x: 90, y: 260, hp: 1 },
-      { x: 390, y: 260, hp: 1 },
-      { x: 180, y: 280, hp: 2 },
-      { x: 300, y: 280, hp: 2 },
-      { x: 240, y: 360, hp: 3 },
-      { x: 150, y: 400, hp: 1 },
-      { x: 330, y: 400, hp: 1 },
-      { x: 240, y: 480, hp: 2 },
-      { x: 110, y: 500, hp: 1 },
-      { x: 370, y: 500, hp: 1 },
+      { x: 120, y: 190, hp: 1 },
+      { x: 240, y: 140, hp: 1 },
+      { x: 360, y: 190, hp: 1 },
+      { x: 90, y: 310, hp: 1 },
+      { x: 390, y: 310, hp: 1 },
+      { x: 180, y: 335, hp: 2 },
+      { x: 300, y: 335, hp: 2 },
+      { x: 240, y: 430, hp: 3 },
+      { x: 150, y: 480, hp: 1 },
+      { x: 330, y: 480, hp: 1 },
+      { x: 240, y: 575, hp: 2 },
+      { x: 110, y: 600, hp: 1 },
+      { x: 370, y: 600, hp: 1 },
     ];
 
     for (const spot of layout) {
-      const radius = 16 + spot.hp * 2;
+      const radius = 13 + spot.hp * 1.6;
       const body = this.matter.add.circle(spot.x, spot.y, radius, {
         isStatic: true,
         restitution: 1,
@@ -659,15 +668,21 @@ export class ArenaScene extends Phaser.Scene {
 
   /**
    * Safety net against tunneling: at the high speeds a fully-charged shot
-   * can reach, Matter can let the ball cross the ~32px wall boundary
-   * within a single physics step and escape the arena entirely (it would
-   * then fly off-screen forever, invisible, until the shot timeout). This
-   * clamps the ball back inside and reflects the offending velocity
-   * component, regardless of what Matter's own wall collision did.
+   * can reach, Matter can let the ball cross the thin wall boundary within
+   * a single physics step and escape the arena entirely (it would then fly
+   * off-screen forever, invisible, until the shot timeout). This clamps
+   * the ball back inside — at the same ARENA_MARGIN the frame is drawn at,
+   * so it never visibly pokes past the border — and reflects the
+   * offending velocity component, regardless of what Matter's own wall
+   * collision did.
    */
   private clampBallToArena(): void {
     if (!this.ball) return;
     const r = BALL_RADIUS;
+    const minX = ARENA_MARGIN + r;
+    const maxX = WIDTH - ARENA_MARGIN - r;
+    const minY = ARENA_MARGIN + r;
+    const maxY = HEIGHT - ARENA_MARGIN - r;
     const pos = this.ball.position;
     const vel = this.ball.velocity;
     let x = pos.x;
@@ -676,21 +691,21 @@ export class ArenaScene extends Phaser.Scene {
     let vy = vel.y;
     let hit = false;
 
-    if (x < r) {
-      x = r;
+    if (x < minX) {
+      x = minX;
       vx = Math.abs(vx);
       hit = true;
-    } else if (x > WIDTH - r) {
-      x = WIDTH - r;
+    } else if (x > maxX) {
+      x = maxX;
       vx = -Math.abs(vx);
       hit = true;
     }
-    if (y < r) {
-      y = r;
+    if (y < minY) {
+      y = minY;
       vy = Math.abs(vy);
       hit = true;
-    } else if (y > HEIGHT - r) {
-      y = HEIGHT - r;
+    } else if (y > maxY) {
+      y = maxY;
       vy = -Math.abs(vy);
       hit = true;
     }
