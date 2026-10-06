@@ -91,6 +91,7 @@ export class ArenaScene extends Phaser.Scene {
 
     this.buildBackdrop();
     this.buildStars();
+    this.buildProps();
     this.buildPegs();
     this.buildLauncher();
     this.buildParticles();
@@ -114,8 +115,8 @@ export class ArenaScene extends Phaser.Scene {
 
   // ---------- procedural art (no external assets yet) ----------
 
-  /** Draws a glossy glowing orb (glow halo + base fill + highlight + rim) once onto a reusable texture. */
-  private bakeOrbTexture(key: string, radius: number, core: number, glow: number): void {
+  /** Draws a glossy glowing orb (glow halo + base fill + highlight + rim), optionally with a little slime face, onto a reusable texture. */
+  private bakeOrbTexture(key: string, radius: number, core: number, glow: number, face = false): void {
     if (this.textures.exists(key)) return;
     const pad = Math.round(radius * 0.9);
     const size = (radius + pad) * 2;
@@ -133,12 +134,29 @@ export class ArenaScene extends Phaser.Scene {
     g.lineStyle(Math.max(1.5, radius * 0.08), 0xffffff, 0.55);
     g.strokeCircle(c, c, radius - 1);
 
+    if (face) {
+      const eyeX = radius * 0.34;
+      const eyeY = radius * 0.08;
+      const eyeR = radius * 0.22;
+      for (const side of [-1, 1]) {
+        g.fillStyle(0xffffff, 0.95);
+        g.fillCircle(c + side * eyeX, c + eyeY, eyeR);
+        g.fillStyle(0x1a1a1a, 1);
+        g.fillCircle(c + side * eyeX + side * eyeR * 0.25, c + eyeY + eyeR * 0.15, eyeR * 0.5);
+      }
+      // a small grumpy mouth line
+      g.lineStyle(Math.max(1.2, radius * 0.07), 0x1a1a1a, 0.6);
+      g.beginPath();
+      g.arc(c, c + radius * 0.5, radius * 0.3, Phaser.Math.DegToRad(20), Phaser.Math.DegToRad(160));
+      g.strokePath();
+    }
+
     g.generateTexture(key, size, size);
     g.destroy();
   }
 
   private bakeTextures(): void {
-    for (const tier of PEG_TIERS) this.bakeOrbTexture(tier.key, 20, tier.core, tier.glow);
+    for (const tier of PEG_TIERS) this.bakeOrbTexture(tier.key, 20, tier.core, tier.glow, true);
     this.bakeOrbTexture("ball", BALL_RADIUS, BALL_CORE, BALL_GLOW);
     this.bakeOrbTexture("launcher", 14, LAUNCHER_CORE, LAUNCHER_GLOW);
 
@@ -151,39 +169,162 @@ export class ArenaScene extends Phaser.Scene {
     }
   }
 
+  /** A mossy stone cave: blocky stonework, cracks, moss patches, rubble — instead of a flat gradient. */
   private buildBackdrop(): void {
     const bg = this.add.graphics().setDepth(-10);
-    bg.fillGradientStyle(0x0c1024, 0x0c1024, 0x1c1138, 0x1c1138, 1);
+    bg.fillGradientStyle(0x1b2420, 0x1b2420, 0x0e1613, 0x0e1613, 1);
     bg.fillRect(0, 0, WIDTH, HEIGHT);
 
-    // faint dot grid for texture
-    bg.fillStyle(0xffffff, 0.035);
-    for (let x = 20; x < WIDTH; x += 28) {
-      for (let y = 20; y < HEIGHT; y += 28) {
-        bg.fillCircle(x, y, 1.4);
+    // irregular stone block courses
+    const rng = Phaser.Math.RND;
+    const blockH = 46;
+    let row = 0;
+    for (let y = -10; y < HEIGHT; y += blockH) {
+      const offset = row % 2 === 0 ? 0 : 34;
+      let x = -offset;
+      while (x < WIDTH) {
+        const w = rng.between(52, 78);
+        const shade = rng.between(-10, 14);
+        const base = Phaser.Display.Color.ValueToColor(0x273830);
+        const tint = Phaser.Display.Color.GetColor(
+          Phaser.Math.Clamp(base.red + shade, 20, 70),
+          Phaser.Math.Clamp(base.green + shade + 6, 30, 85),
+          Phaser.Math.Clamp(base.blue + shade, 20, 70)
+        );
+        bg.fillStyle(tint, 1);
+        bg.fillRoundedRect(x, y, w - 4, blockH - 5, 3);
+        x += w;
       }
+      row++;
+    }
+    // mortar shadow lines on top of the blocks for depth
+    bg.fillStyle(0x070b09, 0.25);
+    for (let y = -10; y < HEIGHT; y += blockH) bg.fillRect(0, y + blockH - 5, WIDTH, 3);
+
+    // moss patches, mostly clinging to the edges
+    for (let i = 0; i < 34; i++) {
+      const edge = rng.between(0, 3);
+      const x = edge < 2 ? rng.between(0, 70) + (edge === 1 ? WIDTH - 70 : 0) : rng.between(0, WIDTH);
+      const y = edge >= 2 ? rng.between(0, 70) + (edge === 3 ? HEIGHT - 70 : 0) : rng.between(0, HEIGHT);
+      const r = rng.between(8, 22);
+      bg.fillStyle(0x3d6b3a, rng.realInRange(0.08, 0.22));
+      bg.fillCircle(x, y, r);
     }
 
-    // soft vignette via corner glows
-    bg.fillStyle(0x000000, 0.35);
+    // scattered pebbles/rubble for texture
+    bg.fillStyle(0x0a1210, 0.4);
+    for (let i = 0; i < 60; i++) {
+      bg.fillCircle(rng.between(0, WIDTH), rng.between(0, HEIGHT), rng.realInRange(0.8, 2.2));
+    }
+
+    // soft vignette top/bottom so the HUD and launcher read clearly
+    bg.fillStyle(0x000000, 0.4);
     bg.fillRect(0, 0, WIDTH, 90);
     bg.fillRect(0, HEIGHT - 140, WIDTH, 140);
 
-    // cabinet-style frame
+    // cabinet-style frame (mossy stone trim)
     const frame = this.add.graphics().setDepth(5);
-    frame.lineStyle(6, 0x241a3d, 1);
+    frame.lineStyle(7, 0x1a2420, 1);
     frame.strokeRoundedRect(6, 6, WIDTH - 12, HEIGHT - 12, 18);
-    frame.lineStyle(2, ACCENT, 0.5);
+    frame.lineStyle(2, 0x5a8a52, 0.55);
     frame.strokeRoundedRect(10, 10, WIDTH - 20, HEIGHT - 20, 16);
   }
 
-  /** A handful of softly twinkling stars behind the pegs — cheap ambient motion. */
+  /** Cave dressing: flickering wall torches, a treasure chest, scattered bones — no two runs look quite as sterile. */
+  private buildProps(): void {
+    this.buildTorch(36, 150);
+    this.buildTorch(WIDTH - 36, 150);
+    this.buildTorch(36, 430);
+    this.buildTorch(WIDTH - 36, 430);
+    this.buildChest(70, HEIGHT - 150);
+    this.buildBones(WIDTH - 90, HEIGHT - 140);
+    this.buildBones(60, HEIGHT - 240, true);
+  }
+
+  private buildTorch(x: number, y: number): void {
+    const g = this.add.graphics().setDepth(1);
+    g.fillStyle(0x4a3826, 1);
+    g.fillRect(x - 3, y - 2, 6, 22);
+    g.fillStyle(0x2a1d12, 1);
+    g.fillRect(x - 5, y - 6, 10, 6);
+
+    const glow = this.add.circle(x, y - 16, 26, 0xffa84a, 0.18).setDepth(0);
+    const flame = this.add.ellipse(x, y - 16, 10, 16, 0xffb347, 0.95).setDepth(1);
+    const flameCore = this.add.ellipse(x, y - 14, 5, 9, 0xfff1c2, 0.95).setDepth(1);
+
+    this.tweens.add({
+      targets: flame,
+      scaleX: { from: 0.85, to: 1.15 },
+      scaleY: { from: 0.9, to: 1.2 },
+      duration: 260,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.InOut",
+    });
+    this.tweens.add({
+      targets: glow,
+      alpha: { from: 0.12, to: 0.24 },
+      scale: { from: 0.9, to: 1.1 },
+      duration: 420,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.InOut",
+      delay: 80,
+    });
+    this.tweens.add({
+      targets: flameCore,
+      y: y - 14 - 2,
+      duration: 200,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.InOut",
+    });
+  }
+
+  private buildChest(x: number, y: number): void {
+    const g = this.add.graphics().setDepth(1);
+    g.fillStyle(0x5a3d22, 1);
+    g.fillRoundedRect(x - 20, y, 40, 24, 4);
+    g.fillStyle(0x3d2815, 1);
+    g.fillRoundedRect(x - 20, y - 12, 40, 16, { tl: 10, tr: 10, bl: 0, br: 0 });
+    g.fillStyle(0xd4af37, 1);
+    g.fillRect(x - 16, y + 6, 32, 3);
+    g.fillCircle(x, y + 8, 4);
+    g.lineStyle(1.5, 0x241709, 0.6);
+    g.strokeRoundedRect(x - 20, y, 40, 24, 4);
+    g.strokeRoundedRect(x - 20, y - 12, 40, 16, { tl: 10, tr: 10, bl: 0, br: 0 });
+  }
+
+  private buildBones(x: number, y: number, skull = false): void {
+    const g = this.add.graphics().setDepth(1);
+    g.fillStyle(0xe8e2d0, 0.85);
+    if (skull) {
+      g.fillCircle(x, y, 9);
+      g.fillStyle(0x1b2420, 0.9);
+      g.fillCircle(x - 3, y - 1, 2);
+      g.fillCircle(x + 3, y - 1, 2);
+      g.fillStyle(0xe8e2d0, 0.85);
+      g.fillTriangle(x - 7, y + 7, x + 7, y + 7, x, y + 14);
+    } else {
+      for (const angle of [-0.3, 0.4]) {
+        g.save();
+        g.translateCanvas(x, y);
+        g.rotateCanvas(angle);
+        g.fillRoundedRect(-18, -2.5, 36, 5, 2.5);
+        g.fillCircle(-18, 0, 4);
+        g.fillCircle(18, 0, 4);
+        g.restore();
+      }
+    }
+  }
+
+  /** A handful of softly twinkling motes (fireflies/dust) — cheap ambient motion. */
   private buildStars(): void {
     for (let i = 0; i < 22; i++) {
       const x = Phaser.Math.Between(20, WIDTH - 20);
       const y = Phaser.Math.Between(100, HEIGHT - 100);
       const r = Phaser.Math.FloatBetween(0.8, 1.8);
-      const star = this.add.circle(x, y, r, 0xffffff, Phaser.Math.FloatBetween(0.15, 0.4)).setDepth(-9);
+      const star = this.add.circle(x, y, r, 0xcdeab0, Phaser.Math.FloatBetween(0.15, 0.4)).setDepth(-9);
       this.tweens.add({
         targets: star,
         alpha: { from: star.alpha, to: 0.05 },
