@@ -1,17 +1,17 @@
 import Phaser from "phaser";
+import { Sfx } from "./sfx";
 
 /**
- * Pinball-roguelike core loop: no gravity, no friction — the launcher
- * fires the ball in a straight line at a constant speed and it bounces
- * elastically off walls/pegs forever (Arkanoid-style), never slowing
- * down and never settling on its own. Since it can't come to rest, a
- * shot just runs for a fixed amount of chaos time (MAX_SHOT_MS) and then
- * auto-recalls, handing control back for the next launch. Score comes
- * from hits; the run ends when you're out of shots.
+ * Pinball-roguelike core loop: no gravity — the launcher fires the ball
+ * in a straight line and it bounces off walls/pegs. It loses only a
+ * whisper of energy per bounce (near-elastic), so a shot stays lively
+ * for a long time instead of dying out fast; MAX_SHOT_MS is still a
+ * backstop in case it never quite reads as "stopped". Score comes from
+ * hits; the run ends when you're out of shots.
  *
- * Still no external art — this pass is about making the procedural look
- * (glowing orbs, particles, a cabinet-style frame) read as a real game
- * instead of flat debug circles, before roguelike powers go on top.
+ * Still no external art — this pass ("revamp") layers juice on top of
+ * the procedural look: combo-scaled particles/shake/haptics, a rising-
+ * pitch hit sound (more dopamine per streak), and a twinkling backdrop.
  */
 
 const WIDTH = 480;
@@ -22,7 +22,7 @@ const START_BALLS = 5;
 const MIN_DRAG = 20;
 const MAX_DRAG = 160;
 const SHOT_SPEED = 14;
-const MAX_SHOT_MS = 7000;
+const MAX_SHOT_MS = 14000;
 const HIT_SCORE = 10;
 const DESTROY_BONUS = 40;
 const CLEAR_BONUS = 300;
@@ -57,6 +57,7 @@ export class ArenaScene extends Phaser.Scene {
 
   private aiming = false;
   private shotElapsedMs = 0;
+  private sfx = new Sfx();
 
   private ballsLeft = START_BALLS;
   private score = 0;
@@ -88,6 +89,7 @@ export class ArenaScene extends Phaser.Scene {
     this.matter.world.setBounds(0, 0, WIDTH, HEIGHT, 32);
 
     this.buildBackdrop();
+    this.buildStars();
     this.buildPegs();
     this.buildLauncher();
     this.buildParticles();
@@ -172,6 +174,25 @@ export class ArenaScene extends Phaser.Scene {
     frame.strokeRoundedRect(6, 6, WIDTH - 12, HEIGHT - 12, 18);
     frame.lineStyle(2, ACCENT, 0.5);
     frame.strokeRoundedRect(10, 10, WIDTH - 20, HEIGHT - 20, 16);
+  }
+
+  /** A handful of softly twinkling stars behind the pegs — cheap ambient motion. */
+  private buildStars(): void {
+    for (let i = 0; i < 22; i++) {
+      const x = Phaser.Math.Between(20, WIDTH - 20);
+      const y = Phaser.Math.Between(100, HEIGHT - 100);
+      const r = Phaser.Math.FloatBetween(0.8, 1.8);
+      const star = this.add.circle(x, y, r, 0xffffff, Phaser.Math.FloatBetween(0.15, 0.4)).setDepth(-9);
+      this.tweens.add({
+        targets: star,
+        alpha: { from: star.alpha, to: 0.05 },
+        duration: Phaser.Math.Between(1400, 3200),
+        yoyo: true,
+        repeat: -1,
+        delay: Phaser.Math.Between(0, 2000),
+        ease: "Sine.InOut",
+      });
+    }
   }
 
   private buildParticles(): void {
@@ -372,9 +393,12 @@ export class ArenaScene extends Phaser.Scene {
 
   private fireBall(angle: number): void {
     const body = this.matter.add.circle(LAUNCHER.x, LAUNCHER.y, BALL_RADIUS, {
-      restitution: 1,
-      friction: 0,
-      frictionAir: 0,
+      // No gravity, and only a whisper of friction: the ball should coast
+      // for a long time, losing speed very gradually instead of being
+      // yanked to a stop.
+      restitution: 0.985,
+      friction: 0.0008,
+      frictionAir: 0.00012,
       frictionStatic: 0,
       label: "ball",
     });
@@ -383,6 +407,7 @@ export class ArenaScene extends Phaser.Scene {
     this.ballGfx = this.add.image(LAUNCHER.x, LAUNCHER.y, "ball").setDepth(7);
     this.shotElapsedMs = 0;
     this.ballTrail.start();
+    this.sfx.launch();
 
     this.ballsLeft -= 1;
     this.shotHits = 0;
@@ -399,15 +424,23 @@ export class ArenaScene extends Phaser.Scene {
     this.shotHits += 1;
     this.score += HIT_SCORE;
 
+    // Everything below scales up with the combo streak — more sparks, a
+    // bigger shake, a stronger buzz — so the hit really does feel bigger
+    // the longer the chain runs, on top of the rising-pitch sound.
+    const comboScale = Math.min(1 + (this.shotHits - 1) * 0.16, 2.4);
+    this.sfx.hit(this.shotHits);
     this.hitSparks.setParticleTint(this.tierForHp(peg.hp + 1, peg.maxHp).core);
-    this.hitSparks.explode(10, peg.body.position.x, peg.body.position.y);
-    this.cameras.main.shake(40, 0.002);
+    this.hitSparks.explode(Math.round(10 * comboScale), peg.body.position.x, peg.body.position.y);
+    this.cameras.main.shake(40 + this.shotHits * 4, 0.0018 + this.shotHits * 0.00025);
+    this.vibrate(10);
     this.spawnScorePopup(peg.body.position.x, peg.body.position.y - peg.radius, HIT_SCORE);
 
     if (peg.hp <= 0) {
       this.score += DESTROY_BONUS;
+      this.sfx.destroy(this.shotHits);
       this.spawnScorePopup(peg.body.position.x, peg.body.position.y - peg.radius - 16, DESTROY_BONUS, true);
-      this.hitSparks.explode(22, peg.body.position.x, peg.body.position.y);
+      this.hitSparks.explode(Math.round(22 * comboScale), peg.body.position.x, peg.body.position.y);
+      this.vibrate([12, 20, 12]);
       this.matter.world.remove(peg.body);
       this.tweens.add({
         targets: peg.gfx,
@@ -422,9 +455,26 @@ export class ArenaScene extends Phaser.Scene {
     }
 
     this.hudScore.setText(`${this.score}`);
-    this.hudHits.setText(this.shotHits > 1 ? `COMBO ${this.shotHits}x` : "");
     if (this.shotHits > 1) {
-      this.tweens.add({ targets: this.hudHits, scale: 1.3, duration: 90, yoyo: true });
+      this.hudHits.setText(`COMBO ${this.shotHits}x`);
+      this.hudHits.setColor(this.comboColor(this.shotHits));
+      this.tweens.add({ targets: this.hudHits, scale: 1.15 + Math.min(this.shotHits * 0.05, 0.6), duration: 90, yoyo: true });
+    } else {
+      this.hudHits.setText("");
+    }
+  }
+
+  private comboColor(combo: number): string {
+    if (combo >= 8) return "#ff4d6a";
+    if (combo >= 5) return "#ffd76a";
+    return "#9fe0a8";
+  }
+
+  private vibrate(pattern: number | number[]): void {
+    try {
+      navigator.vibrate?.(pattern);
+    } catch {
+      // haptics aren't available everywhere — never let this break a hit
     }
   }
 
@@ -446,9 +496,9 @@ export class ArenaScene extends Phaser.Scene {
       if (pegsLeft === 0) {
         this.score += CLEAR_BONUS;
         this.hudScore.setText(`${this.score}`);
-        this.endGame(`Campo limpo! +${CLEAR_BONUS}\nPontuação final: ${this.score}`);
+        this.endGame(`Campo limpo! +${CLEAR_BONUS}\nPontuação final: ${this.score}`, true);
       } else if (this.ballsLeft <= 0) {
-        this.endGame(`Fim de jogo\nPontuação final: ${this.score}`);
+        this.endGame(`Fim de jogo\nPontuação final: ${this.score}`, false);
       }
     }
   }
@@ -461,8 +511,9 @@ export class ArenaScene extends Phaser.Scene {
     this.ball = null;
   }
 
-  private endGame(message: string): void {
+  private endGame(message: string, won: boolean): void {
     this.gameEnded = true;
+    this.sfx.gameOver(won);
     this.hudMessagePanel.clear().setVisible(true);
     this.hudMessagePanel.fillStyle(0x0b0f22, 0.85);
     this.hudMessagePanel.fillRoundedRect(WIDTH / 2 - 180, HEIGHT / 2 - 110, 360, 220, 18);
