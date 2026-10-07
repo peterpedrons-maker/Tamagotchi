@@ -42,6 +42,11 @@ const BALL_GLOW = 0x38bdf8;
 const LAUNCHER_GLOW = 0xffecb3;
 const ACCENT = 0x6ee7ff;
 
+// Real AI-generated art (chroma-keyed from the user's uploads) for the
+// pieces we have so far; anything not listed here still falls back to the
+// procedural look (bakeOrbTexture / bakeCannonTexture).
+const ART_ENEMY_KEYS = ["art-enemy-bat", "art-enemy-mushroom"] as const;
+
 interface Peg {
   body: MatterJS.BodyType;
   gfx: Phaser.GameObjects.Image;
@@ -49,6 +54,7 @@ interface Peg {
   hp: number;
   maxHp: number;
   radius: number;
+  isArtPeg: boolean;
 }
 
 export class ArenaScene extends Phaser.Scene {
@@ -75,9 +81,19 @@ export class ArenaScene extends Phaser.Scene {
   private hudMessagePanel!: Phaser.GameObjects.Graphics;
   private shotHits = 0;
   private gameEnded = false;
+  private ballRotationSpeed = 0;
+  private hasArtAssets = false;
 
   constructor() {
     super("arena");
+  }
+
+  preload(): void {
+    this.load.image("art-cannon", "art/cannon.png");
+    this.load.image("art-ball", "art/ball.png");
+    this.load.image("art-enemy-bat", "art/enemy-bat.png");
+    this.load.image("art-enemy-mushroom", "art/enemy-mushroom.png");
+    this.load.image("art-bg-stone", "art/bg-stone.png");
   }
 
   create(): void {
@@ -90,6 +106,8 @@ export class ArenaScene extends Phaser.Scene {
     this.shotHits = 0;
     this.gameEnded = false;
     this.hudBallIcons = [];
+    this.ballRotationSpeed = 0;
+    this.hasArtAssets = this.textures.exists("art-cannon");
 
     this.bakeTextures();
 
@@ -163,8 +181,12 @@ export class ArenaScene extends Phaser.Scene {
 
   private bakeTextures(): void {
     for (const tier of PEG_TIERS) this.bakeOrbTexture(tier.key, 20, tier.core, tier.glow, true);
-    this.bakeOrbTexture("ball", BALL_RADIUS, BALL_CORE, BALL_GLOW);
-    this.bakeCannonTexture();
+    // Real art covers the ball and cannon now; the procedural bakes stay
+    // only as a fallback if those assets ever fail to load.
+    if (!this.hasArtAssets) {
+      this.bakeOrbTexture("ball", BALL_RADIUS, BALL_CORE, BALL_GLOW);
+      this.bakeCannonTexture();
+    }
 
     if (!this.textures.exists("spark")) {
       const g = this.make.graphics({ x: 0, y: 0 }, false);
@@ -236,37 +258,44 @@ export class ArenaScene extends Phaser.Scene {
     g.destroy();
   }
 
-  /** A mossy stone cave: blocky stonework, cracks, moss patches, rubble — instead of a flat gradient. */
+  /** A mossy stone cave: real tiled stone art when available, else the old procedural blocky fallback — either way topped with cracks, moss patches, rubble. */
   private buildBackdrop(): void {
-    const bg = this.add.graphics().setDepth(-10);
-    bg.fillGradientStyle(0x1b2420, 0x1b2420, 0x0e1613, 0x0e1613, 1);
-    bg.fillRect(0, 0, WIDTH, HEIGHT);
+    if (this.hasArtAssets) {
+      this.add.tileSprite(WIDTH / 2, HEIGHT / 2, WIDTH, HEIGHT, "art-bg-stone").setDepth(-10);
+    } else {
+      const bg = this.add.graphics().setDepth(-10);
+      bg.fillGradientStyle(0x1b2420, 0x1b2420, 0x0e1613, 0x0e1613, 1);
+      bg.fillRect(0, 0, WIDTH, HEIGHT);
 
-    // irregular stone block courses
-    const rng = Phaser.Math.RND;
-    const blockH = 46;
-    let row = 0;
-    for (let y = -10; y < HEIGHT; y += blockH) {
-      const offset = row % 2 === 0 ? 0 : 34;
-      let x = -offset;
-      while (x < WIDTH) {
-        const w = rng.between(52, 78);
-        const shade = rng.between(-10, 14);
-        const base = Phaser.Display.Color.ValueToColor(0x273830);
-        const tint = Phaser.Display.Color.GetColor(
-          Phaser.Math.Clamp(base.red + shade, 20, 70),
-          Phaser.Math.Clamp(base.green + shade + 6, 30, 85),
-          Phaser.Math.Clamp(base.blue + shade, 20, 70)
-        );
-        bg.fillStyle(tint, 1);
-        bg.fillRoundedRect(x, y, w - 4, blockH - 5, 3);
-        x += w;
+      // irregular stone block courses
+      const blockRng = Phaser.Math.RND;
+      const blockH = 46;
+      let row = 0;
+      for (let y = -10; y < HEIGHT; y += blockH) {
+        const offset = row % 2 === 0 ? 0 : 34;
+        let x = -offset;
+        while (x < WIDTH) {
+          const w = blockRng.between(52, 78);
+          const shade = blockRng.between(-10, 14);
+          const base = Phaser.Display.Color.ValueToColor(0x273830);
+          const tint = Phaser.Display.Color.GetColor(
+            Phaser.Math.Clamp(base.red + shade, 20, 70),
+            Phaser.Math.Clamp(base.green + shade + 6, 30, 85),
+            Phaser.Math.Clamp(base.blue + shade, 20, 70)
+          );
+          bg.fillStyle(tint, 1);
+          bg.fillRoundedRect(x, y, w - 4, blockH - 5, 3);
+          x += w;
+        }
+        row++;
       }
-      row++;
+      // mortar shadow lines on top of the blocks for depth
+      bg.fillStyle(0x070b09, 0.25);
+      for (let y = -10; y < HEIGHT; y += blockH) bg.fillRect(0, y + blockH - 5, WIDTH, 3);
     }
-    // mortar shadow lines on top of the blocks for depth
-    bg.fillStyle(0x070b09, 0.25);
-    for (let y = -10; y < HEIGHT; y += blockH) bg.fillRect(0, y + blockH - 5, WIDTH, 3);
+
+    const rng = Phaser.Math.RND;
+    const bg = this.add.graphics().setDepth(-9);
 
     // moss patches, mostly clinging to the edges
     for (let i = 0; i < 34; i++) {
@@ -449,7 +478,9 @@ export class ArenaScene extends Phaser.Scene {
       .setDepth(10);
 
     for (let i = 0; i < START_BALLS; i++) {
-      const icon = this.add.image(WIDTH - 26 - i * 24, 38, "ball").setScale(0.5).setDepth(10);
+      const icon = this.add.image(WIDTH - 26 - i * 24, 38, this.hasArtAssets ? "art-ball" : "ball").setDepth(10);
+      if (this.hasArtAssets) icon.setDisplaySize(22, 22);
+      else icon.setScale(0.5);
       this.hudBallIcons.push(icon);
     }
 
@@ -481,7 +512,13 @@ export class ArenaScene extends Phaser.Scene {
   private updateBallIcons(): void {
     this.hudBallIcons.forEach((icon, i) => {
       const used = i >= this.ballsLeft;
-      icon.setAlpha(used ? 0.2 : 1).setScale(used ? 0.36 : 0.5);
+      icon.setAlpha(used ? 0.2 : 1);
+      if (this.hasArtAssets) {
+        const d = used ? 16 : 22;
+        icon.setDisplaySize(d, d);
+      } else {
+        icon.setScale(used ? 0.36 : 0.5);
+      }
     });
   }
 
@@ -513,7 +550,12 @@ export class ArenaScene extends Phaser.Scene {
     const ring = this.add.circle(LAUNCHER.x, LAUNCHER.y, 26, 0xffffff, 0).setStrokeStyle(2, LAUNCHER_GLOW, 0.5).setDepth(1);
     this.tweens.add({ targets: ring, scale: 1.3, alpha: 0, duration: 1100, repeat: -1, ease: "Sine.Out" });
 
-    this.launcherSprite = this.add.image(LAUNCHER.x, LAUNCHER.y, "cannon").setOrigin(0.5, 0.72).setDepth(2);
+    if (this.hasArtAssets) {
+      this.launcherSprite = this.add.image(LAUNCHER.x, LAUNCHER.y, "art-cannon").setOrigin(0.5, 0.78).setDepth(2);
+      this.launcherSprite.setDisplaySize(76, (76 * this.launcherSprite.height) / this.launcherSprite.width);
+    } else {
+      this.launcherSprite = this.add.image(LAUNCHER.x, LAUNCHER.y, "cannon").setOrigin(0.5, 0.72).setDepth(2);
+    }
     this.muzzleFlash = this.add.image(LAUNCHER.x, LAUNCHER.y, "muzzle-flash").setDepth(3).setVisible(false).setBlendMode("ADD");
   }
 
@@ -555,6 +597,7 @@ export class ArenaScene extends Phaser.Scene {
       { x: 370, y: 700, hp: 5, radius: 17 },
     ];
 
+    let artIndex = 0;
     for (const spot of layout) {
       const { x, y, hp, radius } = spot;
       const body = this.matter.add.circle(x, y, radius, {
@@ -562,10 +605,24 @@ export class ArenaScene extends Phaser.Scene {
         restitution: 1,
         label: "peg",
       });
-      const gfx = this.add.image(x, y, this.tierForHp(hp, hp).key).setDepth(4);
-      gfx.setScale(radius / 20);
+
+      // Small enemies (hp 5) use the real creature art, alternating between
+      // the two designs we have so far; medium/boss still fall back to the
+      // procedural slime-faced orbs until more art comes in.
+      const isArtPeg = this.hasArtAssets && hp === 5;
+      let gfx: Phaser.GameObjects.Image;
+      if (isArtPeg) {
+        const key = ART_ENEMY_KEYS[artIndex % ART_ENEMY_KEYS.length];
+        artIndex += 1;
+        gfx = this.add.image(x, y, key).setDepth(4);
+        gfx.setDisplaySize(radius * 2.3, (radius * 2.3 * gfx.height) / gfx.width);
+      } else {
+        gfx = this.add.image(x, y, this.tierForHp(hp, hp).key).setDepth(4);
+        gfx.setScale(radius / 20);
+      }
+
       const hpBar = this.add.graphics().setDepth(4);
-      const peg: Peg = { body, gfx, hpBar, hp, maxHp: hp, radius };
+      const peg: Peg = { body, gfx, hpBar, hp, maxHp: hp, radius, isArtPeg };
       this.drawHpBar(peg);
       this.pegs.push(peg);
     }
@@ -594,6 +651,17 @@ export class ArenaScene extends Phaser.Scene {
     if (ratio > 0.66) return PEG_TIERS[2];
     if (ratio > 0.33) return PEG_TIERS[1];
     return PEG_TIERS[0];
+  }
+
+  /** White at full health, shifting to an angry red as an art-textured enemy nears death — damage feedback without swapping sprites. */
+  private hpTintColor(ratio: number): number {
+    const c = Phaser.Display.Color.Interpolate.ColorWithColor(
+      Phaser.Display.Color.ValueToColor(0xff4d4d),
+      Phaser.Display.Color.ValueToColor(0xffffff),
+      100,
+      Math.round(Phaser.Math.Clamp(ratio, 0, 1) * 100)
+    );
+    return Phaser.Display.Color.GetColor(c.r, c.g, c.b);
   }
 
   private startAim(): void {
@@ -676,7 +744,17 @@ export class ArenaScene extends Phaser.Scene {
     });
     this.matter.body.setVelocity(body, { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed });
     this.ball = body;
-    this.ballGfx = this.add.image(LAUNCHER.x, LAUNCHER.y, "ball").setDepth(7);
+    const ballKey = this.hasArtAssets ? "art-ball" : "ball";
+    this.ballGfx = this.add.image(LAUNCHER.x, LAUNCHER.y, ballKey).setDepth(7);
+    if (this.hasArtAssets) {
+      const d = BALL_RADIUS * 2.6;
+      this.ballGfx.setDisplaySize(d, d);
+    }
+    // A static texture just sitting still at a constant speed looks dead,
+    // so spin it like a rolling wheel: faster shots spin faster. The
+    // direction doesn't need to track each bounce's new heading for this
+    // to read as "alive" -- it's a visual flourish, not physics.
+    this.ballRotationSpeed = speed / BALL_RADIUS;
     this.shotElapsedMs = 0;
     this.ballTrail.start();
     this.sfx.launch();
@@ -726,7 +804,14 @@ export class ArenaScene extends Phaser.Scene {
         onComplete: () => peg.gfx.destroy(),
       });
     } else {
-      peg.gfx.setTexture(this.tierForHp(peg.hp, peg.maxHp).key);
+      if (peg.isArtPeg) {
+        // Real art has no per-tier sprite, so damage reads through a tint
+        // instead: full health stays untinted, low health flushes red.
+        const ratio = Phaser.Math.Clamp(peg.hp / peg.maxHp, 0, 1);
+        peg.gfx.setTint(this.hpTintColor(ratio));
+      } else {
+        peg.gfx.setTexture(this.tierForHp(peg.hp, peg.maxHp).key);
+      }
       this.drawHpBar(peg);
       this.tweens.add({ targets: peg.gfx, scale: peg.gfx.scale * 1.25, duration: 70, yoyo: true });
     }
@@ -761,6 +846,7 @@ export class ArenaScene extends Phaser.Scene {
     if (this.ball) {
       this.clampBallToArena();
       this.ballGfx.setPosition(this.ball.position.x, this.ball.position.y);
+      this.ballGfx.rotation += this.ballRotationSpeed * (deltaMs / 1000);
       this.ballTrail.setPosition(this.ball.position.x, this.ball.position.y);
 
       // No gravity/friction means the ball never slows down or settles on
