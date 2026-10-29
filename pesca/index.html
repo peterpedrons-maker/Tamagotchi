@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>RPG de Pesca — Protótipo visual</title>
+<style>
+:root{--cream:#f4e8bd;--panel:#342c36;--gold:#d7a85d}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101d27;color:var(--cream);font-family:system-ui,sans-serif}
+#game{display:block;width:100vw;height:100dvh;image-rendering:pixelated;touch-action:none}
+.hud{position:fixed;left:12px;right:12px;top:12px;display:flex;justify-content:space-between;gap:8px;pointer-events:none}
+.pill{background:#302a32eF;border:2px solid #9c7453;box-shadow:inset 0 0 0 2px #4d3a3a;border-radius:10px;padding:8px 11px;font-size:12px;text-shadow:1px 2px #15151b}
+.title{font-weight:800;letter-spacing:.04em;color:#f8d99b}
+.bottom{position:fixed;left:12px;right:12px;bottom:12px;background:#302a32f2;border:3px solid #a17a55;box-shadow:inset 0 0 0 2px #514044;border-radius:12px;padding:11px}
+.row{display:flex;gap:8px;align-items:center;justify-content:space-between}
+button{font:700 14px system-ui;color:#241e26;background:linear-gradient(#f4d18a,#c38b4f);border:2px solid #ffe1a0;border-radius:9px;padding:10px 12px;box-shadow:0 3px 0 #79533e;touch-action:manipulation}
+button:active{transform:translateY(2px);box-shadow:0 1px 0 #79533e}
+#status{font-size:12px;line-height:1.35;color:#f2e3bb;margin:0 0 9px}
+.legend{font-size:10px;color:#d4d2c4;margin-top:7px}
+@media(min-width:600px){.bottom{max-width:500px;left:50%;transform:translateX(-50%)}.hud{max-width:700px;left:50%;right:auto;width:calc(100% - 24px);transform:translateX(-50%)}}
+</style>
+</head>
+<body>
+<canvas id="game" aria-label="Protótipo de jogo de pesca"></canvas>
+<div class="hud"><div class="pill"><div class="title">LAGO DO PINHEIRO</div><div>Dia 1 · Manhã</div></div><div class="pill" id="stats">Nível 1 · XP 0/30<br>Moedas 12</div></div>
+<div class="bottom"><p id="status">Explore a margem e observe as sombras na água. Peixes de tamanhos diferentes deixam silhuetas diferentes.</p><div class="row"><button id="move">Andar pela margem</button><button id="fish">🎣 Pescar aqui</button></div><div class="legend">Demonstração visual: sombras pequenas, médias e grandes; toque na água para escolher o ponto de pesca.</div></div>
+<script>
+(() => {
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=false;
+let W=360,H=780,dpr=1,frame=0,px=.31,py=.62,cast=null,xp=0,coins=12,level=1,walking=false;
+const fish=[{x:.25,y:.43,s:.48,name:'Lambari',size:'pequeno',speed:.0008},{x:.66,y:.34,s:.78,name:'Truta',size:'médio',speed:.0005},{x:.74,y:.55,s:1.18,name:'Bagre',size:'grande',speed:.00025},{x:.45,y:.50,s:.62,name:'Perch',size:'médio',speed:.0007},{x:.14,y:.52,s:.38,name:'Lambari',size:'pequeno',speed:.0009}];
+function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;canvas.width=W*dpr;canvas.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)}addEventListener('resize',resize);resize();
+function poly(points,color){ctx.fillStyle=color;ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.fill()}
+function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h))}
+function drawTree(x,y,s){rect(x-3*s,y-22*s,6*s,24*s,'#654936');for(const [ox,oy,r,c] of [[0,-28,17,'#244b3d'],[-9,-20,12,'#2d6045'],[10,-19,13,'#356b49'],[1,-38,12,'#3b7650']]){ctx.fillStyle=c;ctx.beginPath();ctx.arc(x+ox*s,y+oy*s,r*s,0,Math.PI*2);ctx.fill()}rect(x-8*s,y-35*s,5*s,4*s,'#58875a')}
+function fishShadow(f){let x=f.x*W+Math.sin(frame*f.speed*60+f.y*9)*W*.018,y=f.y*H+Math.cos(frame*f.speed*40)*5,s=f.s*(W/360);ctx.save();ctx.translate(x,y);ctx.rotate(Math.sin(frame*.012+f.x*8)*.08);ctx.globalAlpha=.20;ctx.fillStyle='#0a2633';ctx.beginPath();ctx.ellipse(0,0,12*s,4.7*s,0,0,Math.PI*2);ctx.fill();poly([[-8*s,0],[-14*s,-5*s],[-13*s,5*s]],'#0a2633');ctx.globalAlpha=.25;rect(-4*s,-1*s,8*s,2*s,'#163b48');ctx.restore()}
+function drawWater(){let top=H*.29;rect(0,top,W,H-top,'#286d88');for(let y=top;y<H;y+=24){let t=(y-top)/(H-top);rect(0,y,W,24,t>.65?'#205a76':t>.35?'#246580':'#2a7189')}for(let y=top+5;y<H;y+=16){for(let x=((Math.floor(y/16)%2)*9);x<W;x+=31){let wave=Math.sin(frame*.035+x*.08+y*.04);rect(x+wave*3,y,5+((x+y)%3),2,'#5ba0ac');if((x*3+y)%7<2)rect(x+11,y+5,3,1,'#9ac6bc')}}for(let i=0;i<14;i++){let x=(i*67+frame*.24)%(W+80)-30,y=top+((i*97+frame*.42)%(H-top));rect(x,y,14,2,'#367e91');rect(x+4,y-2,5,1,'#75b4b7')}}
+function drawScene(){rect(0,0,W,H,'#172c2c');drawWater();let shore=H*.30;poly([[0,shore-5],[W*.16,shore+8],[W*.30,shore+38],[W*.48,shore+52],[W*.67,shore+34],[W,shore+12],[W,shore-2]],'#b5a06b');poly([[0,shore-3],[W*.16,shore+9],[W*.30,shore+39],[W*.48,shore+53],[W*.67,shore+35],[W,shore+13],[W,shore+3],[W*.67,shore+25],[W*.48,shore+42],[W*.30,shore+28],[W*.16,shore],[0,shore-12]],'#6a8b55');poly([[0,0],[W,0],[W,shore-4],[W*.67,shore+20],[W*.48,shore+37],[W*.30,shore+22],[W*.16,shore-7],[0,shore-17]],'#315d43');for(let i=0;i<45;i++){let x=(i*47)%W,y=30+(i*71)%(shore+5);rect(x,y,4,3,i%3===0?'#75965a':i%3===1?'#47754b':'#3a6947')}for(let i=0;i<7;i++)drawTree((i*83+22)%W,shore-12+(i%3)*8,.55+(i%3)*.12);for(let i=0;i<12;i++){let x=(i*59+15)%W,y=shore+20+(i%4)*7;rect(x,y,2,8,'#739456');rect(x+3,y-2,2,9,'#8eaa61')}fish.forEach(fishShadow);fish.forEach((f,i)=>{if((Math.floor(frame/110)+i)%4===0){let x=f.x*W+Math.sin(frame*.01+i)*9,y=f.y*H;rect(x-4*f.s,y-1,8*f.s,2,'#4b8490');rect(x+4*f.s,y-3,3*f.s,2,'#4b8490')}});let sx=px*W+12,sy=py*H;ctx.strokeStyle='#f4d58a';ctx.lineWidth=2;ctx.beginPath();ctx.arc(sx,sy,8+Math.sin(frame*.12)*2,0,Math.PI*2);ctx.stroke();if(cast){let x=cast.x*W,y=cast.y*H;ctx.strokeStyle='#e9d7a0';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(px*W,py*H-15);ctx.quadraticCurveTo((px*W+x)/2,sy-35,x,y);ctx.stroke();ctx.fillStyle='#f6e7bd';ctx.beginPath();ctx.arc(x,y+Math.sin(frame*.1)*2,4,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#b7e0dd';ctx.beginPath();ctx.ellipse(x,y+7,9+Math.sin(frame*.12)*3,3,0,0,Math.PI*2);ctx.stroke()}let ax=px*W,ay=py*H;rect(ax-6,ay-3,12,11,'#6c4d39');rect(ax-5,ay-14,10,12,'#d6b17b');rect(ax-6,ay-19,12,6,'#6e513d');rect(ax-4,ay-13,3,2,'#273b40');rect(ax+2,ay-13,2,2,'#273b40');rect(ax-5,ay+8,4,8,'#55475a');rect(ax+2,ay+8,4,8,'#55475a');rect(ax-7,ay+15,6,3,'#c49a60');rect(ax+1,ay+15,6,3,'#c49a60');if(cast)rect(ax+5,ay-12,2,18,'#b98c53')}
+function loop(){frame++;drawScene();requestAnimationFrame(loop)}loop();
+canvas.addEventListener('pointerdown',e=>{let r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)/W,y=(e.clientY-r.top)/H;if(y>H*.30&&y<H*.88){cast={x:Math.max(.04,Math.min(.96,x)),y:Math.max(.32,Math.min(.87,y))};document.getElementById('status').textContent='Ponto escolhido! Toque em “Pescar aqui” para lançar a linha.'}});
+document.getElementById('fish').addEventListener('click',()=>{if(!cast)cast={x:Math.min(.92,px+.25),y:Math.min(.83,py+.14)};let f=fish[Math.floor(Math.random()*fish.length)];xp+=10;coins+=f.s>1?8:f.s>.7?5:2;if(xp>=30){level++;xp-=30}document.getElementById('stats').innerHTML='Nível '+level+' · XP '+xp+'/30<br>Moedas '+coins;document.getElementById('status').textContent='Fisgada! Você encontrou um '+f.name+' ('+f.size+'). A próxima versão terá disputa de tensão e recolhimento.'});
+document.getElementById('move').addEventListener('click',()=>{walking=!walking;px=walking?.42:.31;py=walking?.59:.62;document.getElementById('status').textContent=walking?'Você caminhou pela margem. Toque na água para escolher onde lançar a linha.':'Você voltou ao ponto inicial da margem.'});
+})();
+</script>
+</body></html>
